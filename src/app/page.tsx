@@ -1,65 +1,159 @@
-import Image from "next/image";
+'use strict';
+'use client';
+
+import { useState, useEffect, useMemo } from 'react';
+import { Product } from '../types';
+import { PRODUCTS } from '../constants/mockData';
+import { getStoredCms, getStoredProducts, getStoredServices, CmsConfig, DEFAULT_CMS } from '../utils/storage';
+import { INCLUDED_SERVICES, IncludedService } from '../constants/mockData';
+
+// Component Imports
+import Navbar from '../components/Navbar';
+import Hero from '../components/Hero';
+import Catalog from '../components/Catalog';
+import Services from '../components/Services';
+import ShippingCost from '../components/ShippingCost';
+import Conversation from '../components/Conversation';
+import Footer from '../components/Footer';
+import MobileBottomNav from '../components/MobileBottomNav';
 
 export default function Home() {
+  const [cmsConfig, setCmsConfig] = useState<CmsConfig>(DEFAULT_CMS);
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [services, setServices] = useState<IncludedService[]>(INCLUDED_SERVICES);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setCmsConfig(getStoredCms());
+    setProducts(getStoredProducts());
+    setServices(getStoredServices());
+    setIsClient(true);
+
+    // Track homepage visit analytics
+    try {
+      const visits = localStorage.getItem('mrs_visits') || '0';
+      localStorage.setItem('mrs_visits', (parseInt(visits) + 1).toString());
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  // Format IDR Currency
+  const formatIDR = (value: number) => {
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
+
+  // Tracking function for analytics
+  const trackInquiry = (type: string) => {
+    try {
+      const current = localStorage.getItem('mrs_inquiries') || '0';
+      localStorage.setItem('mrs_inquiries', (parseInt(current) + 1).toString());
+
+      const logs = JSON.parse(localStorage.getItem('mrs_inquiry_logs') || '[]');
+      logs.unshift({
+        timestamp: new Date().toISOString(),
+        type
+      });
+      localStorage.setItem('mrs_inquiry_logs', JSON.stringify(logs.slice(0, 10)));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Compile final general inquiry WhatsApp Message
+  const waMessage = useMemo(() => {
+    let greeting = `Halo ${cmsConfig.brandName} ${cmsConfig.brandSuffix},\n\n`;
+    greeting += `Saya tertarik dengan produk rak gondola dan properti toko Anda. Saya ingin berkonsultasi mengenai layout ruangan, penataan letak rak, serta negosiasi estimasi biaya yang dibutuhkan untuk toko baru saya.\n\n`;
+    greeting += `Mohon dibantu info penawaran harga terbaik dan langkah selanjutnya. Terima kasih!`;
+    return greeting;
+  }, [cmsConfig]);
+
+  // Open WhatsApp Link for general contact
+  const handleWhatsAppSend = () => {
+    trackInquiry('Konsultasi Umum WhatsApp');
+    const encodedText = encodeURIComponent(waMessage);
+    const url = `https://wa.me/${cmsConfig.waNumber}?text=${encodedText}`;
+    window.open(url, '_blank');
+  };
+
+  // Inquiry for specific product card
+  const handleInquireProduct = (product: Product) => {
+    trackInquiry(`Produk: ${product.name}`);
+    const text = `Halo ${cmsConfig.brandName} ${cmsConfig.brandSuffix},\n\nSaya tertarik dengan produk *${product.name}* (Estimasi Harga: ${product.price}). Mohon informasi ketersediaan stok, spesifikasi bahan baja, opsi warna, serta kemungkinan negosiasi harganya. Terima kasih!`;
+    const encodedText = encodeURIComponent(text);
+    const url = `https://wa.me/${cmsConfig.waNumber}?text=${encodedText}`;
+    window.open(url, '_blank');
+  };
+
+  // Inquiry for shipping calculation
+  const handleShippingInquiry = (destination: string, vehicle: string, cost: string) => {
+    trackInquiry(`Cek Ongkir: ${destination} (${vehicle})`);
+    const text = `Halo ${cmsConfig.brandName} ${cmsConfig.brandSuffix},\n\nSaya ingin menanyakan detail biaya pengiriman kargo ke daerah *${destination}* menggunakan armada *${vehicle}*. Berdasarkan hitungan website, perkiraan tarif adalah sekitar *${cost}*. Mohon konfirmasi jadwal kirim dan keakuratan tarifnya. Terima kasih!`;
+    const encodedText = encodeURIComponent(text);
+    const url = `https://wa.me/${cmsConfig.waNumber}?text=${encodedText}`;
+    window.open(url, '_blank');
+  };
+
+  // Trigger quick service consultation
+  const handleServiceInquiry = (serviceName: string) => {
+    trackInquiry(`Layanan: ${serviceName}`);
+    const serviceGreeting = `Halo ${cmsConfig.brandName} ${cmsConfig.brandSuffix},\n\nSaya tertarik dengan Layanan Termasuk: *${serviceName}*.\nMohon info detail mengenai persyaratan dan alur konsultasinya. Terima kasih!`;
+    const encodedText = encodeURIComponent(serviceGreeting);
+    const url = `https://wa.me/${cmsConfig.waNumber}?text=${encodedText}`;
+    window.open(url, '_blank');
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="relative min-h-screen pb-16 md:pb-0">
+      {/* Background decoration glows */}
+      <div className="glow-bg w-[500px] h-[500px] top-[15%] left-[5%]" />
+      <div className="glow-bg w-[600px] h-[600px] top-[45%] right-[5%]" />
+
+      <Navbar 
+        brandName={cmsConfig.brandName} 
+        brandSuffix={cmsConfig.brandSuffix} 
+      />
+
+      <Hero 
+        heroTitle={cmsConfig.heroTitle}
+        heroSubTitle={cmsConfig.heroSubTitle}
+        heroDescription={cmsConfig.heroDescription}
+        brandName={cmsConfig.brandName}
+        brandSuffix={cmsConfig.brandSuffix}
+      />
+
+      <Catalog
+        onInquireProduct={handleInquireProduct}
+        formatIDR={formatIDR}
+        products={products}
+      />
+
+      <Services
+        onTriggerService={handleServiceInquiry}
+        services={services}
+      />
+
+      <ShippingCost
+        onSendWhatsAppShipping={handleShippingInquiry}
+      />
+
+      <Conversation
+        waMessage={waMessage}
+        onSendWhatsApp={handleWhatsAppSend}
+        cartItemCount={0}
+      />
+
+      <Footer 
+        brandName={cmsConfig.brandName}
+        brandSuffix={cmsConfig.brandSuffix}
+        aboutText={cmsConfig.aboutText}
+      />
+      
+      <MobileBottomNav />
     </div>
   );
 }

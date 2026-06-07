@@ -1,0 +1,22 @@
+{
+  "name": "Mulia Rak Store",
+  "short_name": "MuliaRak",
+  "description": "Distributor rak minimarket dan meja kasir berkualitas tinggi.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0284c7",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1573855619003-97b4799dcd8b?auto=format&fit=crop&w=192&q=80",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1573855619003-97b4799dcd8b?auto=format&fit=crop&w=512&q=80",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
