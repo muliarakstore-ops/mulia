@@ -418,8 +418,8 @@ export const getLeadsData = async () => {
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
-  } catch (e) {
-    console.error('Error fetching leads:', e);
+  } catch (e: any) {
+    console.error('Error fetching leads:', e?.message || e?.details || JSON.stringify(e) || e);
     return [];
   }
 };

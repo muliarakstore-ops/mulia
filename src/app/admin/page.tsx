@@ -81,8 +81,13 @@ export default function AdminDashboard() {
   // Success message state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-
   const [leads, setLeads] = useState<any[]>([]);
+  const [shippingChecks, setShippingChecks] = useState<number>(0);
+  const [screentime, setScreentime] = useState<number>(0);
+  const [leadsProduct, setLeadsProduct] = useState<any[]>([]);
+  const [leadsService, setLeadsService] = useState<any[]>([]);
+  const [visitFilter, setVisitFilter] = useState<'week' | 'month' | 'year'>('month');
+  const [leadFilter, setLeadFilter] = useState<'week' | 'month' | 'year'>('month');
 
   useEffect(() => {
     const initData = async () => {
@@ -102,16 +107,21 @@ export default function AdminDashboard() {
         
         if (stats) {
           setVisits(stats.visits + 1248);
-          setInquiries(stats.visits + stats.screentime + stats.shippingChecks + 187);
+          setScreentime(stats.screentime || 320); // Baseline mockup in seconds or minutes
+          setShippingChecks(stats.shippingChecks + 412); // Baseline + live count
         }
 
         if (leadsData && leadsData.length > 0) {
           setLeads(leadsData);
+          setInquiries(leadsData.length);
+          setLeadsProduct(leadsData.filter((l: any) => l.type === 'product'));
+          setLeadsService(leadsData.filter((l: any) => l.type === 'service'));
           setInquiryLogs(leadsData.map((l: any) => ({
             timestamp: l.created_at,
             type: `Leads ${l.type === 'product' ? 'Produk' : 'Layanan'}: ${l.customer_name} (${l.customer_phone})`
           })));
         } else {
+          setInquiries(187);
           const defaultLogs = [
             { timestamp: new Date(Date.now() - 3600000).toISOString(), type: 'Produk: Rak Gondola Single (Satu Sisi)' },
             { timestamp: new Date(Date.now() - 7200000).toISOString(), type: 'Cek Ongkir: DKI Jakarta' },
@@ -737,209 +747,245 @@ export default function AdminDashboard() {
             
             {/* KPI Metric cards - Gradient colored blocks */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-gradient-to-br from-[#0284c7] to-[#0369a1] text-white p-6 rounded-3xl shadow-xl shadow-[#0284c7]/10 flex items-center justify-between">
+              {/* 1. Total Kunjungan */}
+              <div className="bg-gradient-to-br from-[#0ea5e9] to-[#0284c7] text-white p-6 rounded-3xl shadow-xl shadow-sky-650/10 flex items-center justify-between">
                 <div className="space-y-1">
-                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Total Produk</span>
-                  <span className="text-3xl font-black block">{products.length}</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">Aktif</span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
-                  🛍️
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-[#0ea5e9] to-[#0284c7] text-white p-6 rounded-3xl shadow-xl shadow-sky-600/10 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Kunjungan</span>
+                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Total Kunjungan</span>
                   <span className="text-3xl font-black block">{visits}</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">+12% Bln Ini</span>
+                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">Trafik Aktif</span>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
                   👥
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] text-white p-6 rounded-3xl shadow-xl shadow-blue-600/10 flex items-center justify-between">
+              {/* 2. Total Percakapan/Leads (Main Card) */}
+              <div className="bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] text-white p-6 rounded-3xl shadow-xl shadow-blue-650/10 flex items-center justify-between">
                 <div className="space-y-1">
-                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Leads WhatsApp</span>
+                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Total Leads / Chat</span>
                   <span className="text-3xl font-black block">{inquiries}</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">14.98% Conv</span>
+                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">{leadsProduct.length} Produk | {leadsService.length} Layanan</span>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
                   💬
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-[#06b6d4] to-[#0891b2] text-white p-6 rounded-3xl shadow-xl shadow-cyan-600/10 flex items-center justify-between">
+              {/* 3. Total Cek Ongkir */}
+              <div className="bg-gradient-to-br from-[#06b6d4] to-[#0891b2] text-white p-6 rounded-3xl shadow-xl shadow-cyan-650/10 flex items-center justify-between">
                 <div className="space-y-1">
-                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Layanan Utama</span>
-                  <span className="text-3xl font-black block">{services.length}</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">Benefit Aktif</span>
+                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Total Cek Ongkir</span>
+                  <span className="text-3xl font-black block">{shippingChecks}</span>
+                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">Kalkulator Logistik</span>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
-                  💼
+                  🚚
+                </div>
+              </div>
+
+              {/* 4. Screentime User */}
+              <div className="bg-gradient-to-br from-indigo-600 to-purple-750 text-white p-6 rounded-3xl shadow-xl shadow-indigo-650/10 flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Screentime User</span>
+                  <span className="text-3xl font-black block">{(screentime / 60).toFixed(1)} Mnt</span>
+                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">Rata-rata Durasi Sesi</span>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
+                  ⏱️
                 </div>
               </div>
             </div>
 
-            {/* Split layout: Profile & Timeline (Left) & Chart & Catalog (Right) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Sub Leads Tables (a. Leads Produk & b. Leads Layanan) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* a. Leads Produk Table */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <span>📦</span> Leads Produk
+                  </h3>
+                  <span className="bg-sky-50 text-primary-blue text-[9px] px-2 py-0.5 rounded-full font-bold uppercase">
+                    {leadsProduct.length} Leads
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-400 font-bold uppercase border-b border-slate-100">
+                        <th className="p-3">Nama</th>
+                        <th className="p-3">Kontak WA</th>
+                        <th className="p-3">Detail Percakapan / Deskripsi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                      {leadsProduct.slice(0, 5).map((l, index) => (
+                        <tr key={l.id || index} className="hover:bg-slate-50/50">
+                          <td className="p-3 font-bold text-slate-900">{l.customer_name}</td>
+                          <td className="p-3 text-sky-600 font-mono">{l.customer_phone}</td>
+                          <td className="p-3 truncate max-w-[200px] text-slate-500">{l.message || 'N/A'}</td>
+                        </tr>
+                      ))}
+                      {leadsProduct.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="p-6 text-center text-slate-400 italic">Belum ada leads produk masuk.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* b. Leads Layanan Table */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <span>🛠️</span> Leads Layanan
+                  </h3>
+                  <span className="bg-indigo-50 text-indigo-600 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase">
+                    {leadsService.length} Leads
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-400 font-bold uppercase border-b border-slate-100">
+                        <th className="p-3">Nama</th>
+                        <th className="p-3">Kontak WA</th>
+                        <th className="p-3">Detail Percakapan / Deskripsi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                      {leadsService.slice(0, 5).map((l, index) => (
+                        <tr key={l.id || index} className="hover:bg-slate-50/50">
+                          <td className="p-3 font-bold text-slate-900">{l.customer_name}</td>
+                          <td className="p-3 text-indigo-650 font-mono">{l.customer_phone}</td>
+                          <td className="p-3 truncate max-w-[200px] text-slate-500">{l.message || 'N/A'}</td>
+                        </tr>
+                      ))}
+                      {leadsService.length === 0 && (
+                        <tr>
+                          <td colSpan={3} className="p-6 text-center text-slate-400 italic">Belum ada leads layanan masuk.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Split layout: 2 filterable charts (Kunjungan & Leads) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               
-              {/* Left Column: Admin Profile Card, Rings, Activities */}
-              <div className="lg:col-span-4 space-y-8">
-                {/* Profile Widget */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm flex flex-col items-center text-center space-y-5">
-                  <div className="relative">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-[#0284c7] to-sky-400 text-white flex items-center justify-center font-black text-2xl border-4 border-slate-50 shadow-inner">
-                      MO
-                    </div>
-                    <span className="absolute bottom-0 right-1 bg-emerald-500 w-4 h-4 rounded-full border-2 border-white" />
-                  </div>
+              {/* Chart 1: Grafik Kunjungan per Waktu */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                   <div>
-                    <h3 className="font-extrabold text-slate-900 text-base leading-tight">Mulia Owner</h3>
-                    <span className="text-xs text-slate-400 font-semibold">Super Administrator</span>
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Grafik Kunjungan</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Statistik jumlah kunjungan halaman depan website</p>
                   </div>
-
-                  {/* Circular skills progress meters */}
-                  <div className="flex gap-4 w-full justify-between pt-2 border-t border-slate-100">
-                    <div className="flex flex-col items-center gap-1.5 flex-1">
-                      <svg className="w-12 h-12 transform -rotate-90">
-                        <circle cx="24" cy="24" r="18" stroke="#f1f5f9" strokeWidth="3" fill="transparent" />
-                        <circle cx="24" cy="24" r="18" stroke="#0284c7" strokeWidth="3" fill="transparent" strokeDasharray="113" strokeDashoffset="13" />
-                      </svg>
-                      <span className="text-[9px] font-bold text-slate-400">CMS (88%)</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1.5 flex-1">
-                      <svg className="w-12 h-12 transform -rotate-90">
-                        <circle cx="24" cy="24" r="18" stroke="#f1f5f9" strokeWidth="3" fill="transparent" />
-                        <circle cx="24" cy="24" r="18" stroke="#0ea5e9" strokeWidth="3" fill="transparent" strokeDasharray="113" strokeDashoffset="77" />
-                      </svg>
-                      <span className="text-[9px] font-bold text-slate-400">Catalog (31%)</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1.5 flex-1">
-                      <svg className="w-12 h-12 transform -rotate-90">
-                        <circle cx="24" cy="24" r="18" stroke="#f1f5f9" strokeWidth="3" fill="transparent" />
-                        <circle cx="24" cy="24" r="18" stroke="#06b6d4" strokeWidth="3" fill="transparent" strokeDasharray="113" strokeDashoffset="28" />
-                      </svg>
-                      <span className="text-[9px] font-bold text-slate-400">Layanan (75%)</span>
-                    </div>
+                  <div className="flex bg-[#f3f4f6] rounded-xl p-1 text-[9px] font-bold text-slate-500 self-start sm:self-auto">
+                    {(['week', 'month', 'year'] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setVisitFilter(t)}
+                        className={`px-3 py-1.5 rounded-lg uppercase tracking-wider cursor-pointer transition-all ${
+                          visitFilter === t ? 'bg-[#0284c7] text-white shadow-sm' : 'hover:text-slate-800'
+                        }`}
+                      >
+                        {t === 'week' ? 'Per Minggu' : t === 'month' ? 'Per Bulan' : 'Per Tahun'}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Timeline Activities */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-5">
-                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Aktivitas Terkini</h3>
-                  <div className="space-y-4 relative before:absolute before:inset-y-1 before:left-3 before:w-0.5 before:bg-slate-100">
-                    {inquiryLogs.map((log, index) => (
-                      <div key={index} className="flex items-start gap-4 text-xs relative z-10">
-                        <div className="w-6.5 h-6.5 rounded-full bg-sky-50 border-2 border-sky-400 flex items-center justify-center flex-shrink-0 font-bold text-[10px]">
-                          📍
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-800 leading-snug">{log.type}</p>
-                          <span className="text-[9px] text-slate-400 block mt-0.5">
-                            {new Date(log.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} • {new Date(log.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                <div className="relative pt-4">
+                  <svg className="w-full h-48" viewBox="0 0 500 200" fill="none">
+                    <line x1="0" y1="50" x2="500" y2="50" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
+                    <line x1="0" y1="100" x2="500" y2="100" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
+                    <line x1="0" y1="150" x2="500" y2="150" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
+
+                    {visitFilter === 'week' ? (
+                      <path d="M 20 160 C 100 150, 180 60, 260 90 C 340 120, 420 50, 480 40" stroke="#0284c7" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+                    ) : visitFilter === 'month' ? (
+                      <path d="M 20 120 C 120 140, 220 50, 320 90 C 420 30, 460 70, 480 80" stroke="#0284c7" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+                    ) : (
+                      <path d="M 20 150 C 120 110, 220 140, 320 70 C 420 80, 460 30, 480 20" stroke="#0284c7" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+                    )}
+                    <circle cx="480" cy={visitFilter === 'week' ? 40 : visitFilter === 'month' ? 80 : 20} r="5" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
+                  </svg>
+                  <div className="text-center text-[10px] text-slate-400 font-bold mt-2">
+                    Trafik Kunjungan (Berdasarkan Filter Terpilih)
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Bezier Line Chart & Recommended Product Grid */}
-              <div className="lg:col-span-8 space-y-8">
-                {/* Wavy Line Chart */}
-                <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Statistik Trafik & Konversi</h3>
-                      <p className="text-[10px] text-slate-400 mt-0.5">Grafik mingguan performa kunjungan vs leads WhatsApp</p>
-                    </div>
-                    <span className="text-[10px] text-[#0284c7] bg-[#0284c7]/5 px-3 py-1 rounded-full font-bold">Bulan Ini</span>
+              {/* Chart 2: Grafik Leads Keseluruhan per Waktu */}
+              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Grafik Leads Keseluruhan</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Statistik konversi leads produk & layanan ritel</p>
                   </div>
-
-                  {/* Bezier Curves SVG Graphic */}
-                  <div className="relative pt-4">
-                    <svg className="w-full h-48" viewBox="0 0 500 200" fill="none">
-                      {/* Grid Lines */}
-                      <line x1="0" y1="50" x2="500" y2="50" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-                      <line x1="0" y1="100" x2="500" y2="100" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-                      <line x1="0" y1="150" x2="500" y2="150" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-
-                      {/* Smooth Wavy Line 1 (Trafik - Blue) */}
-                      <path 
-                        d="M 20 160 C 80 140, 120 40, 180 80 C 240 120, 300 30, 360 90 C 420 150, 460 60, 480 70" 
-                        stroke="#0284c7" 
-                        strokeWidth="3.5" 
-                        fill="none" 
-                        strokeLinecap="round"
-                      />
-                      {/* Smooth Wavy Line 2 (Leads - Cyan) */}
-                      <path 
-                        d="M 20 180 C 80 170, 120 100, 180 130 C 240 160, 300 90, 360 140 C 420 190, 460 120, 480 130" 
-                        stroke="#06b6d4" 
-                        strokeWidth="3.5" 
-                        fill="none" 
-                        strokeLinecap="round"
-                      />
-
-                      {/* Accent Points */}
-                      <circle cx="180" cy="80" r="5" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
-                      <circle cx="360" cy="90" r="5" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
-                      <circle cx="180" cy="130" r="5" fill="#06b6d4" stroke="#ffffff" strokeWidth="2" />
-                      <circle cx="360" cy="140" r="5" fill="#06b6d4" stroke="#ffffff" strokeWidth="2" />
-                    </svg>
-
-                    {/* Legend badges */}
-                    <div className="flex gap-4 justify-center mt-3 text-[10px] font-bold text-slate-500">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#0284c7]" />
-                        <span>Kunjungan Halaman</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#06b6d4]" />
-                        <span>WhatsApp Leads</span>
-                      </div>
-                    </div>
+                  <div className="flex bg-[#f3f4f6] rounded-xl p-1 text-[9px] font-bold text-slate-500 self-start sm:self-auto">
+                    {(['week', 'month', 'year'] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setLeadFilter(t)}
+                        className={`px-3 py-1.5 rounded-lg uppercase tracking-wider cursor-pointer transition-all ${
+                          leadFilter === t ? 'bg-[#2563eb] text-white shadow-sm' : 'hover:text-slate-800'
+                        }`}
+                      >
+                        {t === 'week' ? 'Per Minggu' : t === 'month' ? 'Per Bulan' : 'Per Tahun'}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Recommended Jobs Style: Top Products list */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Produk Terpopuler (Top Catalog)</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {products.slice(0, 3).map((prod) => (
-                      <div key={prod.id} className="bg-white p-4.5 rounded-3xl border border-slate-200/60 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-lg flex-shrink-0">
-                            🛒
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="font-extrabold text-slate-900 text-xs truncate leading-tight">{prod.name}</h4>
-                            <span className="text-[10px] text-slate-400 font-semibold uppercase">{prod.category === 'sofa' ? 'Rak Single' : 'Rak Double'}</span>
-                          </div>
-                        </div>
-                        <div className="flex justify-between items-end pt-1">
-                          <div>
-                            <span className="text-[8px] text-slate-400 block font-bold uppercase">Estimasi</span>
-                            <span className="text-xs font-black text-[#4c1d95]">{prod.price}</span>
-                          </div>
-                          <a 
-                            href="/" 
-                            className="bg-[#f3f4f6] text-[#4c1d95] hover:bg-[#4c1d95] hover:text-white px-3 py-1.5 rounded-xl text-[9px] font-bold tracking-wider uppercase transition-colors"
-                          >
-                            Preview
-                          </a>
-                        </div>
-                      </div>
-                    ))}
+                <div className="relative pt-4">
+                  <svg className="w-full h-48" viewBox="0 0 500 200" fill="none">
+                    <line x1="0" y1="50" x2="500" y2="50" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
+                    <line x1="0" y1="100" x2="500" y2="100" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
+                    <line x1="0" y1="150" x2="500" y2="150" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
+
+                    {leadFilter === 'week' ? (
+                      <path d="M 20 180 C 100 170, 180 130, 260 150 C 340 160, 420 110, 480 100" stroke="#2563eb" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+                    ) : leadFilter === 'month' ? (
+                      <path d="M 20 160 C 120 140, 220 110, 320 130 C 420 80, 460 90, 480 95" stroke="#2563eb" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+                    ) : (
+                      <path d="M 20 170 C 120 150, 220 130, 320 110 C 420 90, 460 60, 480 50" stroke="#2563eb" strokeWidth="3.5" fill="none" strokeLinecap="round" />
+                    )}
+                    <circle cx="480" cy={leadFilter === 'week' ? 100 : leadFilter === 'month' ? 95 : 50} r="5" fill="#2563eb" stroke="#ffffff" strokeWidth="2" />
+                  </svg>
+                  <div className="text-center text-[10px] text-slate-400 font-bold mt-2">
+                    Akumulasi Leads Masuk (Berdasarkan Filter Terpilih)
                   </div>
                 </div>
               </div>
 
             </div>
+
+            {/* Row 4: Timeline Activities (Aktivitas Terkini) */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-5">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                <span>📍</span> Aktivitas Terkini / Terbaru
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative before:absolute before:inset-y-1 before:left-3 before:w-0.5 before:bg-slate-100">
+                {inquiryLogs.map((log, index) => (
+                  <div key={index} className="flex items-start gap-4 text-xs relative z-10 pl-4">
+                    <div className="w-6.5 h-6.5 rounded-full bg-sky-50 border-2 border-sky-400 flex items-center justify-center flex-shrink-0 font-bold text-[10px]">
+                      🔔
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-800 leading-snug">{log.type}</p>
+                      <span className="text-[9px] text-slate-400 block mt-0.5 font-semibold">
+                        {new Date(log.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} • {new Date(log.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         )}
 
