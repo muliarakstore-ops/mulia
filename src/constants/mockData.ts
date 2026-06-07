@@ -116,6 +116,7 @@ export const PRODUCTS: Product[] = [
 ];
 
 export interface IncludedService {
+  id?: string;
   title: string;
   description: string;
 }

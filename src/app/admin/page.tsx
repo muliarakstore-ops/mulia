@@ -5,6 +5,21 @@ import React, { useState, useEffect } from 'react';
 import { Product } from '../../types';
 import { getStoredCms, saveStoredCms, getStoredProducts, saveStoredProducts, getStoredServices, saveStoredServices, CmsConfig, DEFAULT_CMS } from '../../utils/storage';
 import { PRODUCTS, IncludedService, INCLUDED_SERVICES } from '../../constants/mockData';
+import { 
+  loadCmsConfig, 
+  saveCmsConfig, 
+  getSupabaseProducts, 
+  saveSupabaseProduct, 
+  deleteSupabaseProduct, 
+  getSupabaseServices, 
+  saveSupabaseService, 
+  deleteSupabaseService, 
+  getAnalyticsStats, 
+  getLeadsData, 
+  updateLeadStatus, 
+  getSupabaseTransactions, 
+  saveSupabaseTransaction 
+} from '../../utils/supabaseData';
 
 export default function AdminDashboard() {
   const [activeMenu, setActiveMenu] = useState<'overview' | 'cms' | 'profile' | 'catalog' | 'services' | 'creative_overview' | 'creative_plan' | 'creative_eval' | 'biz_financials' | 'biz_ledger' | 'biz_analysis' | 'settings'>('overview');
@@ -67,38 +82,64 @@ export default function AdminDashboard() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
 
+  const [leads, setLeads] = useState<any[]>([]);
+
   useEffect(() => {
-    setIsClient(true);
-    const storedCms = getStoredCms();
-    const storedProds = getStoredProducts();
-    const storedServices = getStoredServices();
-    
-    setCmsConfig(storedCms);
-    setProducts(storedProds);
-    setServices(storedServices);
+    const initData = async () => {
+      try {
+        const [supabaseCms, supabaseProds, supabaseServices, stats, leadsData, txs] = await Promise.all([
+          loadCmsConfig(),
+          getSupabaseProducts(),
+          getSupabaseServices(),
+          getAnalyticsStats(),
+          getLeadsData(),
+          getSupabaseTransactions()
+        ]);
 
-    // Initialize/load stats
-    try {
-      const v = localStorage.getItem('mrs_visits');
-      const i = localStorage.getItem('mrs_inquiries');
-      const logs = localStorage.getItem('mrs_inquiry_logs');
+        if (supabaseCms) setCmsConfig(supabaseCms);
+        if (supabaseProds && supabaseProds.length > 0) setProducts(supabaseProds);
+        if (supabaseServices && supabaseServices.length > 0) setServices(supabaseServices);
+        
+        if (stats) {
+          setVisits(stats.visits + 1248);
+          setInquiries(stats.visits + stats.screentime + stats.shippingChecks + 187);
+        }
 
-      if (v) setVisits(parseInt(v) + 1248); // Baseline mock + live count
-      if (i) setInquiries(parseInt(i) + 187);  // Baseline mock + live count
-      if (logs) {
-        setInquiryLogs(JSON.parse(logs));
-      } else {
-        // Mock default logs
-        const defaultLogs = [
-          { timestamp: new Date(Date.now() - 3600000).toISOString(), type: 'Produk: Rak Gondola Single (Satu Sisi)' },
-          { timestamp: new Date(Date.now() - 7200000).toISOString(), type: 'Cek Ongkir: DKI Jakarta' },
-          { timestamp: new Date(Date.now() - 14400000).toISOString(), type: 'Konsultasi Umum WhatsApp' }
-        ];
-        setInquiryLogs(defaultLogs);
+        if (leadsData && leadsData.length > 0) {
+          setLeads(leadsData);
+          setInquiryLogs(leadsData.map((l: any) => ({
+            timestamp: l.created_at,
+            type: `Leads ${l.type === 'product' ? 'Produk' : 'Layanan'}: ${l.customer_name} (${l.customer_phone})`
+          })));
+        } else {
+          const defaultLogs = [
+            { timestamp: new Date(Date.now() - 3600000).toISOString(), type: 'Produk: Rak Gondola Single (Satu Sisi)' },
+            { timestamp: new Date(Date.now() - 7200000).toISOString(), type: 'Cek Ongkir: DKI Jakarta' },
+            { timestamp: new Date(Date.now() - 14400000).toISOString(), type: 'Konsultasi Umum WhatsApp' }
+          ];
+          setInquiryLogs(defaultLogs);
+        }
+
+        if (txs && txs.length > 0) {
+          setTransactions(txs.map((t: any) => ({
+            id: t.id,
+            date: t.date,
+            desc: t.description || t.category,
+            type: t.type === 'income' ? (t.category === 'Suntikan Modal' ? 'permodalan' : 'penjualan') : 'pengeluaran',
+            amount: Number(t.amount)
+          })));
+        }
+      } catch (e) {
+        console.error('Error fetching Supabase data, falling back to local defaults:', e);
+        // Fallback
+        setCmsConfig(getStoredCms());
+        setProducts(getStoredProducts());
+        setServices(getStoredServices());
       }
-    } catch(e) {
-      console.error(e);
-    }
+      setIsClient(true);
+    };
+
+    initData();
   }, []);
 
   const showToast = (msg: string) => {
@@ -109,10 +150,15 @@ export default function AdminDashboard() {
   };
 
   // Handle CMS Save
-  const handleSaveCMS = (e: React.FormEvent) => {
+  const handleSaveCMS = async (e: React.FormEvent) => {
     e.preventDefault();
-    saveStoredCms(cmsConfig);
-    showToast('Konten CMS Berhasil Disimpan!');
+    const success = await saveCmsConfig(cmsConfig);
+    if (success) {
+      showToast('Konten CMS Berhasil Disimpan di Supabase!');
+    } else {
+      saveStoredCms(cmsConfig);
+      showToast('Konten CMS Berhasil Disimpan (Local Fallback)!');
+    }
   };
 
   // Open Add Product Modal
@@ -134,7 +180,9 @@ export default function AdminDashboard() {
     setEditingProductId(product.id);
     setProdName(product.name);
     setProdCategory(product.category);
-    setProdPrice(product.price);
+    // Parse formatting back to integer for form or keep
+    const cleanPriceStr = product.price.replace(/[^0-9]/g, '');
+    setProdPrice(cleanPriceStr || '0');
     setProdImage(product.image);
     setProdDescription(product.description);
     setProdSpecs(product.specs ? product.specs.join('\n') : '');
@@ -142,7 +190,7 @@ export default function AdminDashboard() {
   };
 
   // Save Product (Create or Update)
-  const handleSaveProduct = (e: React.FormEvent) => {
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!prodName || !prodPrice || !prodDescription) {
       alert('Nama, harga, dan deskripsi produk wajib diisi.');
@@ -154,50 +202,79 @@ export default function AdminDashboard() {
       .map(s => s.trim())
       .filter(s => s !== '');
 
-    let updatedProducts: Product[] = [];
+    const priceNum = parseFloat(prodPrice) || 0;
 
-    if (modalMode === 'add') {
-      const newProduct: Product = {
-        id: `custom-prod-${Date.now()}`,
-        name: prodName,
-        category: prodCategory,
-        price: prodPrice,
-        image: prodImage || 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=400&q=80',
-        description: prodDescription,
-        specs: specArray
-      };
-      updatedProducts = [newProduct, ...products];
-      showToast('Produk Baru Berhasil Ditambahkan!');
+    const success = await saveSupabaseProduct({
+      id: editingProductId || undefined,
+      name: prodName,
+      category: prodCategory,
+      minPrice: priceNum,
+      maxPrice: priceNum,
+      description: prodDescription,
+      imageUrl: prodImage || 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=400&q=80',
+      height: 180,
+      length: 90,
+      width: 45,
+      additionalInfo: specArray.join('\n'),
+      stock: 10 // default initial stock
+    });
+
+    if (success) {
+      const updatedProds = await getSupabaseProducts();
+      setProducts(updatedProds);
+      showToast(modalMode === 'add' ? 'Produk Baru Berhasil Ditambahkan!' : 'Detail Produk Berhasil Diperbarui!');
     } else {
-      updatedProducts = products.map(p => {
-        if (p.id === editingProductId) {
-          return {
-            ...p,
-            name: prodName,
-            category: prodCategory,
-            price: prodPrice,
-            image: prodImage,
-            description: prodDescription,
-            specs: specArray
-          };
-        }
-        return p;
-      });
-      showToast('Detail Produk Berhasil Diperbarui!');
+      // Local fallback
+      let updatedProducts: Product[] = [];
+      if (modalMode === 'add') {
+        const newProduct: Product = {
+          id: `custom-prod-${Date.now()}`,
+          name: prodName,
+          category: prodCategory,
+          price: `Rp ${priceNum.toLocaleString('id-ID')}`,
+          image: prodImage || 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=400&q=80',
+          description: prodDescription,
+          specs: specArray
+        };
+        updatedProducts = [newProduct, ...products];
+      } else {
+        updatedProducts = products.map(p => {
+          if (p.id === editingProductId) {
+            return {
+              ...p,
+              name: prodName,
+              category: prodCategory,
+              price: `Rp ${priceNum.toLocaleString('id-ID')}`,
+              image: prodImage,
+              description: prodDescription,
+              specs: specArray
+            };
+          }
+          return p;
+        });
+      }
+      setProducts(updatedProducts);
+      saveStoredProducts(updatedProducts);
+      showToast('Produk Berhasil Disimpan (Local Fallback)!');
     }
 
-    setProducts(updatedProducts);
-    saveStoredProducts(updatedProducts);
     setIsModalOpen(false);
   };
 
   // Delete Product
-  const handleDeleteProduct = (id: string, name: string) => {
+  const handleDeleteProduct = async (id: string, name: string) => {
     if (confirm(`Apakah Anda yakin ingin menghapus produk "${name}" dari katalog?`)) {
-      const updated = products.filter(p => p.id !== id);
-      setProducts(updated);
-      saveStoredProducts(updated);
-      showToast('Produk Berhasil Dihapus!');
+      const success = await deleteSupabaseProduct(id);
+      if (success) {
+        const updated = await getSupabaseProducts();
+        setProducts(updated);
+        showToast('Produk Berhasil Dihapus!');
+      } else {
+        const updated = products.filter(p => p.id !== id);
+        setProducts(updated);
+        saveStoredProducts(updated);
+        showToast('Produk Berhasil Dihapus (Local Fallback)!');
+      }
     }
   };
 
@@ -220,47 +297,68 @@ export default function AdminDashboard() {
   };
 
   // Save Service
-  const handleSaveService = (e: React.FormEvent) => {
+  const handleSaveService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!srvTitle || !srvDescription) {
       alert('Judul dan penjelasan layanan wajib diisi.');
       return;
     }
 
-    let updatedServices: IncludedService[] = [];
+    const serviceData = {
+      id: services[editingSrvIdx!]?.id || undefined,
+      title: srvTitle,
+      description: srvDescription
+    };
 
-    if (srvModalMode === 'add') {
-      const newService: IncludedService = {
-        title: srvTitle,
-        description: srvDescription
-      };
-      updatedServices = [...services, newService];
-      showToast('Layanan Baru Berhasil Ditambahkan!');
+    const success = await saveSupabaseService(serviceData);
+
+    if (success) {
+      const updatedServices = await getSupabaseServices();
+      setServices(updatedServices);
+      showToast(srvModalMode === 'add' ? 'Layanan Baru Berhasil Ditambahkan!' : 'Layanan Berhasil Diperbarui!');
     } else {
-      updatedServices = services.map((s, idx) => {
-        if (idx === editingSrvIdx) {
-          return {
-            title: srvTitle,
-            description: srvDescription
-          };
-        }
-        return s;
-      });
-      showToast('Layanan Berhasil Diperbarui!');
+      let updatedServices: IncludedService[] = [];
+      if (srvModalMode === 'add') {
+        const newService: IncludedService = {
+          title: srvTitle,
+          description: srvDescription
+        };
+        updatedServices = [...services, newService];
+      } else {
+        updatedServices = services.map((s, idx) => {
+          if (idx === editingSrvIdx) {
+            return {
+              title: srvTitle,
+              description: srvDescription
+            };
+          }
+          return s;
+        });
+      }
+      setServices(updatedServices);
+      saveStoredServices(updatedServices);
+      showToast('Layanan Berhasil Disimpan (Local Fallback)!');
     }
 
-    setServices(updatedServices);
-    saveStoredServices(updatedServices);
     setIsSrvModalOpen(false);
   };
 
   // Delete Service
-  const handleDeleteService = (index: number, title: string) => {
+  const handleDeleteService = async (index: number, title: string) => {
     if (confirm(`Apakah Anda yakin ingin menghapus layanan "${title}"?`)) {
-      const updated = services.filter((_, idx) => idx !== index);
-      setServices(updated);
-      saveStoredServices(updated);
-      showToast('Layanan Berhasil Dihapus!');
+      const id = services[index]?.id;
+      const success = id ? await deleteSupabaseService(id) : false;
+
+      if (success) {
+        const updated = await getSupabaseServices();
+        setServices(updated);
+        showToast('Layanan Berhasil Dihapus!');
+      } else {
+        const updated = services.filter((_, idx) => idx !== index);
+        setServices(updated);
+        saveStoredServices(updated);
+        showToast('Layanan Berhasil Dihapus (Local Fallback)!');
+      }
     }
   };
 

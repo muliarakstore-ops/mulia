@@ -6,6 +6,7 @@ import { Product } from '../types';
 import { PRODUCTS } from '../constants/mockData';
 import { getStoredCms, getStoredProducts, getStoredServices, CmsConfig, DEFAULT_CMS } from '../utils/storage';
 import { INCLUDED_SERVICES, IncludedService } from '../constants/mockData';
+import { loadCmsConfig, getSupabaseProducts, getSupabaseServices, insertAnalyticsEvent, insertLeadRecord } from '../utils/supabaseData';
 
 // Component Imports
 import Navbar from '../components/Navbar';
@@ -24,15 +25,33 @@ export default function Home() {
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setCmsConfig(getStoredCms());
-    setProducts(getStoredProducts());
-    setServices(getStoredServices());
-    setIsClient(true);
+    const initData = async () => {
+      try {
+        const [supabaseCms, supabaseProds, supabaseServices] = await Promise.all([
+          loadCmsConfig(),
+          getSupabaseProducts(),
+          getSupabaseServices()
+        ]);
+        
+        if (supabaseCms) setCmsConfig(supabaseCms);
+        if (supabaseProds && supabaseProds.length > 0) setProducts(supabaseProds);
+        if (supabaseServices && supabaseServices.length > 0) setServices(supabaseServices);
+      } catch (e) {
+        console.error('Error fetching Supabase data, using localStorage fallbacks:', e);
+        setCmsConfig(getStoredCms());
+        setProducts(getStoredProducts());
+        setServices(getStoredServices());
+      }
+      setIsClient(true);
+    };
+
+    initData();
 
     // Track homepage visit analytics
     try {
       const visits = localStorage.getItem('mrs_visits') || '0';
       localStorage.setItem('mrs_visits', (parseInt(visits) + 1).toString());
+      insertAnalyticsEvent('visit', undefined, { path: '/' });
     } catch (e) {
       console.error(e);
     }
@@ -48,7 +67,7 @@ export default function Home() {
   };
 
   // Tracking function for analytics
-  const trackInquiry = (type: string) => {
+  const trackInquiry = async (type: string, isLead = false, details?: any) => {
     try {
       const current = localStorage.getItem('mrs_inquiries') || '0';
       localStorage.setItem('mrs_inquiries', (parseInt(current) + 1).toString());
@@ -59,6 +78,19 @@ export default function Home() {
         type
       });
       localStorage.setItem('mrs_inquiry_logs', JSON.stringify(logs.slice(0, 10)));
+
+      // Log in Supabase
+      if (isLead) {
+        await insertLeadRecord({
+          type: details?.type || 'product',
+          referenceId: details?.id,
+          customerName: 'Customer Website',
+          customerPhone: cmsConfig.waNumber,
+          message: type
+        });
+      } else {
+        await insertAnalyticsEvent('shipping_check', undefined, { detail: type });
+      }
     } catch (e) {
       console.error(e);
     }
@@ -82,7 +114,7 @@ export default function Home() {
 
   // Inquiry for specific product card
   const handleInquireProduct = (product: Product) => {
-    trackInquiry(`Produk: ${product.name}`);
+    trackInquiry(`Produk: ${product.name}`, true, { type: 'product', id: product.id });
     const text = `Halo ${cmsConfig.brandName} ${cmsConfig.brandSuffix},\n\nSaya tertarik dengan produk *${product.name}* (Estimasi Harga: ${product.price}). Mohon informasi ketersediaan stok, spesifikasi bahan baja, opsi warna, serta kemungkinan negosiasi harganya. Terima kasih!`;
     const encodedText = encodeURIComponent(text);
     const url = `https://wa.me/${cmsConfig.waNumber}?text=${encodedText}`;
@@ -91,7 +123,7 @@ export default function Home() {
 
   // Inquiry for shipping calculation
   const handleShippingInquiry = (destination: string, vehicle: string, cost: string) => {
-    trackInquiry(`Cek Ongkir: ${destination} (${vehicle})`);
+    trackInquiry(`Cek Ongkir: ${destination} (${vehicle})`, false);
     const text = `Halo ${cmsConfig.brandName} ${cmsConfig.brandSuffix},\n\nSaya ingin menanyakan detail biaya pengiriman kargo ke daerah *${destination}* menggunakan armada *${vehicle}*. Berdasarkan hitungan website, perkiraan tarif adalah sekitar *${cost}*. Mohon konfirmasi jadwal kirim dan keakuratan tarifnya. Terima kasih!`;
     const encodedText = encodeURIComponent(text);
     const url = `https://wa.me/${cmsConfig.waNumber}?text=${encodedText}`;
@@ -100,7 +132,7 @@ export default function Home() {
 
   // Trigger quick service consultation
   const handleServiceInquiry = (serviceName: string) => {
-    trackInquiry(`Layanan: ${serviceName}`);
+    trackInquiry(`Layanan: ${serviceName}`, true, { type: 'service' });
     const serviceGreeting = `Halo ${cmsConfig.brandName} ${cmsConfig.brandSuffix},\n\nSaya tertarik dengan Layanan Termasuk: *${serviceName}*.\nMohon info detail mengenai persyaratan dan alur konsultasinya. Terima kasih!`;
     const encodedText = encodeURIComponent(serviceGreeting);
     const url = `https://wa.me/${cmsConfig.waNumber}?text=${encodedText}`;

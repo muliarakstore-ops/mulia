@@ -5,14 +5,26 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
 import { getStoredCms, CmsConfig, DEFAULT_CMS } from '../../utils/storage';
+import { loadCmsConfig } from '../../utils/supabaseData';
 
 export default function AboutUs() {
   const [cmsConfig, setCmsConfig] = useState<CmsConfig>(DEFAULT_CMS);
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setCmsConfig(getStoredCms());
-    setIsClient(true);
+    const fetchConfig = async () => {
+      try {
+        const config = await loadCmsConfig();
+        if (config) {
+          setCmsConfig(config);
+        }
+      } catch (e) {
+        console.error('Failed to load Supabase CMS config on About page:', e);
+        setCmsConfig(getStoredCms());
+      }
+      setIsClient(true);
+    };
+    fetchConfig();
   }, []);
 
   const handleConsultationClick = () => {
