@@ -1,0 +1,15 @@
+# Tasks - Admin Dashboard Implementation
+
+- `[ ]` Update page.tsx and components to support state synchronization via localStorage
+  - `[ ]` Set up initialization and hooks for loading/saving products & CMS config
+  - `[ ]` Refactor `page.tsx` to read dynamic state
+  - `[ ]` Refactor `Navbar.tsx` and WhatsApp link generators to use dynamic config
+- `[ ]` Build Admin Dashboard Layout (`src/app/admin/page.tsx`)
+  - `[ ]` Build Sidebar layout and responsive mobile toggle drawer
+  - `[ ]` Implement **Overview** tab (charts, insights, KPIs)
+  - `[ ]` Implement **CMS** tab (Brand name, phone number, taglines, banner settings)
+  - `[ ]` Implement **Product Catalog** tab (CRUD data table + modals for add/edit)
+  - `[ ]` Implement **Settings** tab (Reset options, theme toggles)
+- `[ ]` Verification & Integration Check
+  - `[ ]` Run build checks
+  - `[ ]` Test dynamic data update end-to-end

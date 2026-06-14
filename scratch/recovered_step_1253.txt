@@ -1,0 +1,22 @@
+# Walkthrough of Changes
+
+We have updated the service management form fields in the admin dashboard page.
+
+## Changes Made
+
+### Service (Benefit) Form
+- File: [page.tsx](file:///F:/projek/mulia/src/app/admin/page.tsx)
+- Added state variable `srvIcon`.
+- Redesigned the service form dialog to include the following fields:
+  1. **Judul Benefit**: Input for the name/title of the benefit.
+  2. **Ikon (.ico)**: File upload input supporting `.ico` files. Converts uploaded files to base64 Data URLs with instant image previews.
+  3. **Penjelasan / Deskripsi**: Textarea input for benefit description.
+- Refactored the dashboard Services table to display the benefit icon.
+
+### IncludedService Model
+- File: [mockData.ts](file:///F:/projek/mulia/src/constants/mockData.ts)
+- Added `iconUrl?: string;` property to the `IncludedService` interface.
+
+## Verification
+- Verified state management and save bindings hook up to both Supabase client data layer and local storage.
+- Verified build compiles without issues.

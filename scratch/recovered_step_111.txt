@@ -1,0 +1,13 @@
+- [x] Create `src/types/index.ts` for central types
+- [x] Create `src/constants/mockData.ts` for static catalog content
+- [x] Create components under `src/components/`
+  - [x] `Navbar.tsx`
+  - [x] `Hero.tsx`
+  - [x] `Catalog.tsx`
+  - [x] `Services.tsx`
+  - [x] `Conversation.tsx`
+  - [x] `Footer.tsx`
+  - [x] `CartDrawer.tsx`
+- [x] Update `src/app/page.tsx` to orchestrate modular components
+- [x] Remove deprecated `src/app/types.ts`
+- [x] Verify successful build using `npm run build`

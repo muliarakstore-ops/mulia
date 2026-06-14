@@ -1,0 +1,34 @@
+# Implementation Plan - Pure Catalog & Shipping Cost Estimator
+
+Adjust the website to act as a pure catalog (removing the cart drawer and cart additions) and add an interactive "Cek Ongkir" (shipping cost estimator) section directly below the Services section.
+
+## Proposed Changes
+
+### 1. [DELETE] [CartDrawer.tsx](file:///f:/projek/mulia/src/components/CartDrawer.tsx)
+Remove the shopping cart sidebar drawer completely.
+
+### 2. [MODIFY] [types/index.ts](file:///f:/projek/mulia/src/types/index.ts)
+Remove `CartItem` declarations.
+
+### 3. [MODIFY] [Navbar.tsx](file:///f:/projek/mulia/src/components/Navbar.tsx)
+Remove the cart button trigger.
+
+### 4. [MODIFY] [Catalog.tsx](file:///f:/projek/mulia/src/components/Catalog.tsx)
+Change the "Add to Cart" button to a direct "Tanya Admin" button that opens WhatsApp with an inquiry for that specific product.
+
+### 5. [NEW] [ShippingCost.tsx](file:///f:/projek/mulia/src/components/ShippingCost.tsx)
+Create a new interactive shipping cost estimator component. It allows users to:
+- Enter their city/region.
+- Select estimated weight / rack quantity.
+- Select shipping type (Cargo Trucking / Pick-up Box).
+- Display an estimated delivery fee.
+- Provide a direct WhatsApp button to confirm the exact delivery rate with the admin.
+
+### 6. [MODIFY] [page.tsx](file:///f:/projek/mulia/src/app/page.tsx)
+Remove all cart states and integrate the new `ShippingCost` component below the `Services` component.
+
+## Verification Plan
+- Build project using `npm run build`.
+- Verify the removal of all cart triggers.
+- Test product card "Tanya Admin" buttons.
+- Verify the interactive shipping cost calculator and its WhatsApp checkout triggers.

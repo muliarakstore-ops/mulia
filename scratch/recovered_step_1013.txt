@@ -1,0 +1,21 @@
+# Tasks - Admin Dashboard Implementation
+
+- `[x]` Update page.tsx and components to support state synchronization via localStorage
+  - `[x]` Set up initialization and hooks for loading/saving products & CMS config
+  - `[x]` Refactor `page.tsx` to read dynamic state
+  - `[x]` Refactor `Navbar.tsx` and WhatsApp link generators to use dynamic config
+- `[x]` Build Admin Dashboard Layout (`src/app/admin/page.tsx`)
+  - `[x]` Build Sidebar layout and responsive mobile toggle drawer
+  - `[x]` Implement **Overview** tab (charts, insights, KPIs)
+  - `[x]` Implement **CMS** tab (Brand name, phone number, taglines, banner settings)
+  - `[x]` Implement **Product Catalog** tab (CRUD data table + modals for add/edit)
+  - `[x]` Implement **Settings** tab (Reset options, theme toggles)
+- `[x]` Verification & Integration Check
+  - `[x]` Run build checks
+  - `[x]` Test dynamic data update end-to-end
+- `[/]` Integrate Supabase with Admin Dashboard and Homepage
+  - `[x]` Create Supabase database tables, schema, constraints, and RLS policies
+  - `[x]` Write `src/utils/supabaseData.ts` for database CRUD operations
+  - `[ ]` Refactor `src/app/admin/page.tsx` to load/save data from Supabase
+  - `[ ]` Refactor homepage `src/app/page.tsx` to pull data from Supabase
+  - `[ ]` Refactor `src/app/about/page.tsx` to pull data from Supabase

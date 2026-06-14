@@ -1,0 +1,24 @@
+# Walkthrough of Changes
+
+We have updated the profile management form fields in the admin dashboard page.
+
+## Changes Made
+
+### Business Profile Form
+- File: [page.tsx](file:///F:/projek\mulia\src\app\admin\page.tsx)
+- Redesigned the "Profil Bisnis & Kontak" tab with the following fields:
+  1. **Logo Bisnis**: Supports image file upload (converts to base64 Data URL) and manual URL link input, complete with preview container.
+  2. **Nama Merk / Bisnis**: Maps to `cmsConfig.brandName`.
+  3. **Alamat Lengkap**: Textarea mapping to `cmsConfig.address`.
+  4. **Email**: Input field mapping to `cmsConfig.email`.
+  5. **No. WhatsApp**: Input field mapping to `cmsConfig.waNumber`.
+  6. **Tautan Sosial Media**: Display list of platforms (Instagram, Facebook, TikTok, YouTube). Each item has a text URL field and a custom toggle switch (On/Off) that updates `cmsConfig.socialMedia` array dynamic state.
+
+### Supabase Data Helper
+- File: [supabaseData.ts](file:///F:/projek\mulia\src\utils\supabaseData.ts)
+- Added `logoUrl` property mapping to `FullCmsConfig` interface.
+- Loaded `logo_url` column from the Supabase `profile` table, and updated it in the saving configuration request payload.
+
+## Verification
+- Verified state binding and saving logic.
+- Next.js build compiled successfully (`npm run build`).

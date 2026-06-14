@@ -1,0 +1,29 @@
+# Walkthrough of Changes
+
+We have added an About Us content editor to the profile form in the admin dashboard, and mapped these fields to the public About Us view page.
+
+## Changes Made
+
+### Admin Dashboard (Profile Form)
+- File: [page.tsx](file:///F:/projek/mulia/src/app/admin/page.tsx)
+- Inserted a new form section "Informasi Halaman About Us" containing:
+  1. **Slogan Utama**: Text input mapping to `cmsConfig.aboutSlogan`.
+  2. **Tahun Berdiri**: Numeric input mapping to `cmsConfig.establishedYear`.
+  3. **Deskripsi Bisnis (Tentang Kami)**: Textarea mapping to `cmsConfig.aboutText`.
+  4. **Keunggulan Utama (Unique Product)**: Text input mapping to `cmsConfig.uniqueProductTitle`.
+  5. **Deskripsi Keunggulan Utama**: Text input mapping to `cmsConfig.uniqueProductDescription`.
+  6. **Visi Bisnis**: Textarea mapping to `cmsConfig.aboutVision`.
+  7. **Misi Bisnis**: Textarea mapping to `cmsConfig.aboutMission`.
+
+### Public About Us Page
+- File: [page.tsx](file:///F:/projek/mulia/src/app/about/page.tsx)
+- Modified state type to use `FullCmsConfig`.
+- Rendered dynamic properties in the view layout:
+  - Displayed the custom slogan and main business description.
+  - Dynamically computed the industry experience time based on the business's established year.
+  - Displayed the custom unique selling points title/description.
+  - Rendered Visi and Misi details dynamically, with a checklist fallback.
+
+## Verification
+- Verified state bindings and save functionality to Supabase.
+- Next.js build compiled successfully (`npm run build`).

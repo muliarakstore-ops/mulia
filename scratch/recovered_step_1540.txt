@@ -1,0 +1,6 @@
+# Checklist Logika Analitik & Pelacakan
+
+- `[ ]` Update `trackInquiry` dan click handlers di halaman publik agar semua 5 tombol WhatsApp mencatat lead ke database Supabase (`leads` table)
+- `[ ]` Pastikan klik tombol Cek Ongkir mencatat event `shipping_check` ke `analytics_metrics`
+- `[ ]` Implementasikan tracker Screentime di halaman publik (`src/app/page.tsx`) menggunakan Visibility API & focus events
+- `[ ]` Lakukan verifikasi kompilasi build & jalankan pengetesan tipe data

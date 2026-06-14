@@ -1,0 +1,7 @@
+- [ ] Modify `src/types/index.ts` to remove `CartItem`
+- [ ] Modify `src/components/Navbar.tsx` to remove the cart button
+- [ ] Modify `src/components/Catalog.tsx` to replace cart buttons with direct WhatsApp links
+- [ ] Create `src/components/ShippingCost.tsx` for the interactive shipping estimator
+- [ ] Modify `src/app/page.tsx` to remove cart states and integrate the shipping calculator
+- [ ] Remove deprecated `src/components/CartDrawer.tsx`
+- [ ] Verify clean build using `npm run build`

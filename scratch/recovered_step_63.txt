@@ -1,0 +1,10 @@
+- [x] Create `src/app/types.ts` for product and cart typings
+- [x] Update `src/app/globals.css` with Google Fonts, gold-emerald color vars, and base styling
+- [x] Implement the interactive components in `src/app/page.tsx`
+  - [x] Navbar (with search & shopping cart drawer toggle)
+  - [x] Hero Page (with high-end design assets & scroll-down indicator)
+  - [x] Product Page (grid, filtering, and add-to-cart functionality)
+  - [x] Service Page (custom interior design packages)
+  - [x] Conversation Page (interactive live WhatsApp message builder & direct checkout link)
+  - [x] Footer (beautiful typography and structured navigation)
+- [x] Verify the compilation and test local building

@@ -1,0 +1,26 @@
+# Walkthrough of Changes
+
+We have refactored the creative sub-menus in the admin dashboard into a single, unified "Creative Page".
+
+## Changes Made
+
+### Sidebar Navigation
+- File: [page.tsx](file:///F:/projek/mulia/src/app/admin/page.tsx)
+- Replaced the three old buttons (Campaigns, Content Planner, Performance) under the "Tim Kreatif" category with a single **Creative Page** navigation button mapping to `creative_overview`.
+
+### Creative Page Layout & Functionality
+- File: [page.tsx](file:///F:/projek/mulia/src/app/admin/page.tsx)
+- Refactored `creative_overview` active view to display:
+  - **Video Section**:
+    - Metric Cards: Total Video Diproduksi, Video Telah Diposting, Belum Diposting (Draft).
+    - Add Video Button: Opens a modal form to insert new videos.
+    - Video Portfolio Grid: Lists all videos with Title, URL, Status Badge (Draft, Produced, Posted), Date, and Edit/Delete controls.
+  - **Design Section**:
+    - Metric Card: Total Desain Diproduksi.
+    - Add Design Button: Opens a modal form to insert new designs with file upload support.
+    - Design Portfolio Grid: Lists all designs with Title, Image Preview, Status, and Edit/Delete controls.
+- Defined states and integrated event saving handlers with the Supabase creative data layer client (`creative_videos` and `creative_designs` tables).
+
+## Verification
+- Checked state synchronization during creation, updates, and deletes.
+- Next.js build compiled successfully (`npm run build`).

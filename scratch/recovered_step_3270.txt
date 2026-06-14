@@ -1,0 +1,44 @@
+const fs = require('fs');
+const readline = require('readline');
+
+async function findEdits() {
+  const fileStream = fs.createReadStream('C:\\Users\\ANGGA\\.gemini\\antigravity\\brain\\4ddd9b56-414c-4f6b-95c3-2f1413609e9c\\.system_generated\\logs\\transcript.jsonl');
+  const rl = readline.createInterface({
+    input: fileStream,
+    crlfDelay: Infinity
+  });
+
+  let stepCount = 0;
+  for await (const line of rl) {
+    stepCount++;
+    if (line.includes('replace_file_content') && line.includes('admin/page.tsx')) {
+      try {
+        const obj = JSON.parse(line);
+        if (obj.tool_calls) {
+          for (const tc of obj.tool_calls) {
+            if (tc.arguments && tc.arguments.TargetFile && tc.arguments.TargetFile.endsWith('page.tsx')) {
+              console.log(`Step ${stepCount}: replace_file_content`);
+              console.log(`  StartLine: ${tc.arguments.StartLine}, EndLine: ${tc.arguments.EndLine}`);
+              console.log(`  TargetContent length: ${tc.arguments.TargetContent ? tc.arguments.TargetContent.length : 0}`);
+              console.log(`  ReplacementContent length: ${tc.arguments.ReplacementContent ? tc.arguments.ReplacementContent.length : 0}`);
+            }
+          }
+        }
+      } catch (e) {}
+    } else if (line.includes('write_to_file') && line.includes('admin/page.tsx')) {
+      try {
+        const obj = JSON.parse(line);
+        if (obj.tool_calls) {
+          for (const tc of obj.tool_calls) {
+            if (tc.arguments && tc.arguments.TargetFile && tc.arguments.TargetFile.endsWith('page.tsx')) {
+              console.log(`Step ${stepCount}: write_to_file`);
+              console.log(`  CodeContent length: ${tc.arguments.CodeContent ? tc.arguments.CodeContent.length : 0}`);
+            }
+          }
+        }
+      } catch (e) {}
+    }
+  }
+}
+
+findEdits();

@@ -1,0 +1,21 @@
+# Walkthrough of Changes
+
+We have updated the product management form fields in the admin dashboard page.
+
+## Changes Made
+
+### Admin Dashboard Component
+- File: [page.tsx](file:///F:/projek/mulia/src/app/admin/page.tsx)
+- Removed unused state variables `prodPrice` and `prodSpecs`.
+- Redesigned the product form dialog with the following fields:
+  1. **Nama Produk**: Main input for product name.
+  2. **Kategori**: Select input for product category.
+  3. **Foto Produk**: URL link input.
+  4. **Harga Minimum & Harga Maksimum**: Separate numeric inputs mapping to `prodMinPrice` and `prodMaxPrice` (handles the Min Price = Max Price formatting logic dynamically in saving/displaying).
+  5. **Deskripsi**: Textarea input.
+  6. **Dimensi (Tinggi, Panjang, Lebar)**: Separate numeric inputs for dimensions in cm.
+  7. **Keterangan Tambahan**: Textarea input for notes such as shelves count, coating type, display depths, and load capacity.
+
+## Verification
+- Verified state management and save bindings hook up cleanly to the Supabase client data layer.
+- Verified build compiles without issues.
