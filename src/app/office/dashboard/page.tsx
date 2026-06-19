@@ -2,9 +2,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Product } from '../../types';
-import { getStoredCms, saveStoredCms, getStoredProducts, saveStoredProducts, getStoredServices, saveStoredServices, CmsConfig, DEFAULT_CMS } from '../../utils/storage';
-import { PRODUCTS, IncludedService, INCLUDED_SERVICES } from '../../constants/mockData';
+import { Product } from '../../../types';
+import { getStoredCms, saveStoredCms, getStoredProducts, saveStoredProducts, getStoredServices, saveStoredServices, CmsConfig, DEFAULT_CMS } from '../../../utils/storage';
+import { PRODUCTS, IncludedService, INCLUDED_SERVICES } from '../../../constants/mockData';
 import { 
   loadCmsConfig, 
   saveCmsConfig, 
@@ -27,23 +27,55 @@ import {
   saveSupabaseDesign,
   deleteSupabaseDesign,
   FullCmsConfig
-} from '../../utils/supabaseData';
+} from '../../../utils/supabaseData';
 
-import OverviewSection from '../../components/admin/OverviewSection';
-import CmsSection from '../../components/admin/CmsSection';
-import ProfileSection from '../../components/admin/ProfileSection';
-import CatalogSection from '../../components/admin/CatalogSection';
-import ServicesSection from '../../components/admin/ServicesSection';
-import CreativeSection from '../../components/admin/CreativeSection';
-import BusinessSection from '../../components/admin/BusinessSection';
-import SettingsSection from '../../components/admin/SettingsSection';
+import OverviewSection from '../../../components/admin/OverviewSection';
+import CmsSection from '../../../components/admin/CmsSection';
+import ProfileSection from '../../../components/admin/ProfileSection';
+import CatalogSection from '../../../components/admin/CatalogSection';
+import ServicesSection from '../../../components/admin/ServicesSection';
+import CreativeSection from '../../../components/admin/CreativeSection';
+import BusinessSection from '../../../components/admin/BusinessSection';
+import SettingsSection from '../../../components/admin/SettingsSection';
+
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../../utils/supabase';
 
 export default function AdminDashboard() {
+  const router = useRouter();
   const [activeMenu, setActiveMenu] = useState<'overview' | 'cms' | 'profile' | 'catalog' | 'services' | 'creative' | 'biz_financials' | 'biz_ledger' | 'biz_analysis' | 'settings'>('overview');
   const [cmsConfig, setCmsConfig] = useState<FullCmsConfig>(DEFAULT_CMS);
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<IncludedService[]>([]);
   const [isClient, setIsClient] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [userEmail, setUserEmail] = useState('Mulia Owner');
+  const [userRole, setUserRole] = useState('Super Admin');
+
+  // Authentication check
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push('/office');
+        return;
+      }
+      
+      const user = session.user;
+      const email = user.email || '';
+      
+      if (email.toLowerCase() === 'iqbal@muliarak.store') {
+        // Owner must be redirected to their own business page
+        router.push('/office/business');
+        return;
+      }
+      
+      setUserEmail(email || 'arif@muliarak.store');
+      setUserRole('admin');
+      setCheckingAuth(false);
+    };
+    checkAuth();
+  }, [router]);
 
   // Analytics Stats
   const [visits, setVisits] = useState<number>(0);
@@ -190,7 +222,7 @@ export default function AdminDashboard() {
     }
     const reader = new FileReader();
     reader.onloadend = () => {
-      setCmsConfig(prev => ({
+      setCmsConfig((prev: FullCmsConfig) => ({
         ...prev,
         [field]: reader.result as string
       }));
@@ -456,10 +488,21 @@ export default function AdminDashboard() {
     }
   };
 
-  if (!isClient) {
+  const handleLogout = async () => {
+    if (confirm('Apakah Anda yakin ingin keluar?')) {
+      // Clear cookies
+      document.cookie = 'mrs_session_token=; path=/; max-age=0; SameSite=Lax; Secure';
+      document.cookie = 'mrs_session_user=; path=/; max-age=0; SameSite=Lax; Secure';
+      await supabase.auth.signOut();
+      router.push('/office');
+    }
+  };
+
+  if (checkingAuth || !isClient) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-500 font-sans">
-        Memuat Dashboard Administrator...
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-500 font-sans space-y-3">
+        <div className="animate-spin text-2xl">⏳</div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Memverifikasi Sesi...</p>
       </div>
     );
   }
@@ -583,53 +626,6 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            {/* Category: Dashboard Bisnis */}
-            <div className="space-y-1.5">
-              <div className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest pl-3 pb-1 pt-1">Dashboard Bisnis</div>
-              
-              <button
-                onClick={() => setActiveMenu('biz_financials')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
-                  activeMenu === 'biz_financials'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Financials</span>
-              </button>
-
-              <button
-                onClick={() => setActiveMenu('biz_ledger')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-3 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
-                  activeMenu === 'biz_ledger'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-                <span>Cash Ledger</span>
-              </button>
-
-              <button
-                onClick={() => setActiveMenu('biz_analysis')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-3 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
-                  activeMenu === 'biz_analysis'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M7 12l3-3 3 3 4-4M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                <span>ROI Projection</span>
-              </button>
-            </div>
-
             {/* Category: Pengaturan */}
             <div className="space-y-1.5">
               <div className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest pl-3 pb-1 pt-1">Sistem</div>
@@ -710,12 +706,18 @@ export default function AdminDashboard() {
             {/* Profile bubble */}
             <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
               <div className="text-right hidden sm:block">
-                <span className="text-xs font-bold text-slate-900 block leading-tight">Mulia Owner</span>
-                <span className="text-[10px] text-slate-400 font-bold">Super Admin</span>
+                <span className="text-xs font-bold text-slate-900 block leading-tight truncate max-w-[150px]" title={userEmail}>
+                  {userEmail.split('@')[0]}
+                </span>
+                <span className="text-[10px] text-slate-400 font-bold capitalize">{userRole}</span>
               </div>
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#0284c7] to-sky-400 text-white flex items-center justify-center font-bold text-xs border border-white">
-                MO
-              </div>
+              <button 
+                onClick={handleLogout}
+                title="Keluar / Logout"
+                className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#0284c7] to-sky-400 text-white flex items-center justify-center font-bold text-xs border border-white hover:opacity-90 transition-opacity cursor-pointer"
+              >
+                {userEmail.substring(0, 2).toUpperCase()}
+              </button>
             </div>
           </div>
         </header>
