@@ -25,36 +25,65 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'File tidak ditemukan dalam request' }, { status: 400 });
     }
 
-    let auth: any;
+    // Strict validation of file types
+    if (uploadType === 'video' && !file.type.startsWith('video/')) {
+      return NextResponse.json({ error: 'Tipe file tidak valid! Kategori video hanya menerima file video.' }, { status: 400 });
+    }
 
-    // Use OAuth2 if configured (avoids Service Account 0GB quota issue)
-    if (CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN) {
-      const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
-      oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
-      auth = oauth2Client;
-    } else if (CLIENT_EMAIL && PRIVATE_KEY) {
-      // Fallback to JWT Service Account
-      const formattedKey = PRIVATE_KEY.replace(/^['"]/, '').replace(/['"]$/, '').replace(/\\n/g, '\n');
-      auth = new google.auth.JWT({
-        email: CLIENT_EMAIL,
-        key: formattedKey,
-        scopes: ['https://www.googleapis.com/auth/drive']
-      });
-    } else {
+    if (uploadType === 'design' && !file.type.startsWith('image/')) {
+      return NextResponse.json({ error: 'Tipe file tidak valid! Kategori foto/desain hanya menerima file gambar.' }, { status: 400 });
+    }
+
+    // Helper functions for authorization
+    const getServiceAccountAuth = () => {
+      if (CLIENT_EMAIL && PRIVATE_KEY) {
+        const formattedKey = PRIVATE_KEY.replace(/^['"]/, '').replace(/['"]$/, '').replace(/\\n/g, '\n');
+        return new google.auth.JWT({
+          email: CLIENT_EMAIL,
+          key: formattedKey,
+          scopes: ['https://www.googleapis.com/auth/drive']
+        });
+      }
+      return null;
+    };
+
+    const getOAuth2Auth = () => {
+      if (CLIENT_ID && CLIENT_SECRET && REFRESH_TOKEN) {
+        const oauth2Client = new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET);
+        oauth2Client.setCredentials({ refresh_token: REFRESH_TOKEN });
+        return oauth2Client;
+      }
+      return null;
+    };
+
+    let auth = getOAuth2Auth();
+    let usingOAuth2 = !!auth;
+
+    if (!auth) {
+      auth = getServiceAccountAuth();
+      usingOAuth2 = false;
+    }
+
+    if (!auth) {
       return NextResponse.json(
         { error: 'Kredensial Google Drive belum dikonfigurasi di file .env.local (Butuh OAuth2 atau Service Account)' },
         { status: 500 }
       );
     }
 
-    const drive = google.drive({ version: 'v3', auth });
+    let drive = google.drive({ version: 'v3', auth });
 
-    // Convert File object to buffer then readable stream
+    // Convert File object to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const stream = new Readable();
-    stream.push(buffer);
-    stream.push(null);
+
+    // Helper to get a fresh readable stream for each upload attempt
+    const getFreshStream = () => {
+      const s = new Readable();
+      s.push(buffer);
+      s.push(null);
+      return s;
+    };
 
     // Upload config
     const fileMetadata: any = {
@@ -74,17 +103,44 @@ export async function POST(req: NextRequest) {
       fileMetadata.parents = [targetFolderId];
     }
 
-    const media = {
-      mimeType: file.type,
-      body: stream,
-    };
+    let uploadRes: any;
 
-    // 1. Upload file to Google Drive
-    const uploadRes = await drive.files.create({
-      requestBody: fileMetadata,
-      media: media,
-      fields: 'id, webViewLink, webContentLink',
-    });
+    // 1. Upload file to Google Drive (with Service Account fallback if OAuth2 fails)
+    try {
+      uploadRes = await drive.files.create({
+        requestBody: fileMetadata,
+        media: {
+          mimeType: file.type,
+          body: getFreshStream(),
+        },
+        fields: 'id, webViewLink, webContentLink',
+      });
+    } catch (uploadErr: any) {
+      const isAuthErr = uploadErr.message?.includes('invalid_grant') || 
+                        uploadErr.code === 400 || 
+                        uploadErr.code === 401 ||
+                        uploadErr.message?.includes('auth');
+
+      if (usingOAuth2 && isAuthErr) {
+        console.warn('OAuth2 failed with auth error, trying Service Account fallback...', uploadErr);
+        const serviceAuth = getServiceAccountAuth();
+        if (serviceAuth) {
+          drive = google.drive({ version: 'v3', auth: serviceAuth });
+          uploadRes = await drive.files.create({
+            requestBody: fileMetadata,
+            media: {
+              mimeType: file.type,
+              body: getFreshStream(),
+            },
+            fields: 'id, webViewLink, webContentLink',
+          });
+        } else {
+          throw uploadErr;
+        }
+      } else {
+        throw uploadErr;
+      }
+    }
 
     const fileId = uploadRes.data.id;
     if (!fileId) {
@@ -92,16 +148,19 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Make the file public (Anyone can view)
-    await drive.permissions.create({
-      fileId: fileId,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-    });
+    try {
+      await drive.permissions.create({
+        fileId: fileId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+      });
+    } catch (permErr) {
+      console.warn('Failed to set public permission, continuing anyway...', permErr);
+    }
 
     // 3. Construct a reliable direct public view link
-    // Google Drive direct link format for images/videos:
     const publicUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
 
     return NextResponse.json({

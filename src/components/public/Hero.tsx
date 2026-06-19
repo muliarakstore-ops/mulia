@@ -7,6 +7,8 @@ interface HeroProps {
   heroDescription?: string;
   brandName?: string;
   brandSuffix?: string;
+  heroSubTopTitle?: string;
+  heroBgImageUrl?: string;
 }
 
 export default function Hero({
@@ -15,6 +17,8 @@ export default function Hero({
   heroDescription = 'Menyediakan Rak Gondola, Meja Kasir, Rak Rokok, dan aksesoris minimarket berkualitas tinggi langsung dari pabrik dengan standar baja terbaik.',
   brandName = 'MULIA',
   brandSuffix = 'Rak Store',
+  heroSubTopTitle = 'Pabrik & Distributor Utama Rak Minimarket / Supermarket',
+  heroBgImageUrl,
 }: HeroProps) {
   return (
     <div id="hero">
@@ -22,12 +26,12 @@ export default function Hero({
       <section
         className="hidden md:flex relative min-h-screen flex-col justify-center items-center px-4 py-24 text-center overflow-hidden bg-cover bg-center"
         style={{
-          backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.75) 100%), url('https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=1920&q=80')`,
+          backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.6) 0%, rgba(15, 23, 42, 0.75) 100%), url('${heroBgImageUrl || 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=1920&q=80'}')`,
         }}
       >
         <div className="max-w-4xl z-10 space-y-6 px-2">
           <div className="inline-block bg-primary-blue/35 text-sky-200 border border-sky-400/35 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-1">
-            Pabrik & Distributor Utama Rak Minimarket / Supermarket
+            {heroSubTopTitle}
           </div>
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold leading-tight tracking-tight text-white">
             {heroTitle} <br />
@@ -36,7 +40,7 @@ export default function Hero({
           <p className="text-base sm:text-lg text-white/80 max-w-2xl mx-auto font-light leading-relaxed">
             {heroDescription}
           </p>
-
+ 
           <div className="pt-4 flex flex-col sm:flex-row justify-center items-center gap-3.5 w-full max-w-sm sm:max-w-none mx-auto">
             <a
               href="#catalog"
@@ -52,7 +56,7 @@ export default function Hero({
             </a>
           </div>
         </div>
-
+ 
         {/* Scroll Indicator */}
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 text-white/40 animate-pulse">
           <span className="text-[9px] uppercase tracking-widest font-semibold">Scroll</span>
@@ -61,7 +65,7 @@ export default function Hero({
           </svg>
         </div>
       </section>
-
+ 
       {/* Mobile Hero Section (PWA Landscape Banner Card, screen < md) */}
       <section
         className="md:hidden flex flex-col px-4 pt-20 pb-4"
@@ -69,7 +73,7 @@ export default function Hero({
         <div
           className="w-full aspect-[2/1] rounded-3xl relative overflow-hidden flex items-center p-5 bg-cover bg-center shadow-md border border-slate-dark/5"
           style={{
-            backgroundImage: `linear-gradient(to right, rgba(15, 23, 42, 0.95) 45%, rgba(15, 23, 42, 0.3) 100%), url('https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=600&q=80')`,
+            backgroundImage: `linear-gradient(to right, rgba(15, 23, 42, 0.95) 45%, rgba(15, 23, 42, 0.3) 100%), url('${heroBgImageUrl || 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=600&q=80'}')`,
           }}
         >
           {/* Content inside the card */}

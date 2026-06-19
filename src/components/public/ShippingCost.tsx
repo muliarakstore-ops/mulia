@@ -3,6 +3,8 @@ import React, { useState, useMemo } from 'react';
 
 interface ShippingCostProps {
   onSendWhatsAppShipping: (destination: string, vehicle: string, cost: string) => void;
+  shippingMainTitle?: string;
+  shippingSubTitle?: string;
 }
 
 const DESTINATIONS = [
@@ -22,7 +24,11 @@ const VEHICLES = [
   { id: 'fuso', label: 'Truk Fuso Besar (Kapasitas > 60 Rak)', multiplier: 3.5 },
 ];
 
-export default function ShippingCost({ onSendWhatsAppShipping }: ShippingCostProps) {
+export default function ShippingCost({
+  onSendWhatsAppShipping,
+  shippingMainTitle,
+  shippingSubTitle,
+}: ShippingCostProps) {
   const [selectedDestId, setSelectedDestId] = useState<string>('jkt');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('pickup');
 
@@ -59,8 +65,12 @@ export default function ShippingCost({ onSendWhatsAppShipping }: ShippingCostPro
         <div className="inline-block bg-primary-blue-light text-primary-blue border border-primary-blue/20 px-3.5 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">
           🚚 Distribusi Aman Se-Indonesia
         </div>
-        <h2 className="text-2xl md:text-4xl font-extrabold text-slate-dark tracking-tight">Estimasi Cek Ongkir Kargo</h2>
-        <p className="text-slate-dark/60 text-[10px] md:text-base">Hitung perkiraan ongkos kirim pengiriman rak gondola besi menggunakan armada kargo darat & laut terbaik.</p>
+        <h2 className="text-2xl md:text-4xl font-extrabold text-slate-dark tracking-tight">
+          {shippingMainTitle || 'Estimasi Cek Ongkir Kargo'}
+        </h2>
+        <p className="text-slate-dark/60 text-[10px] md:text-base">
+          {shippingSubTitle || 'Hitung perkiraan ongkos kirim pengiriman rak gondola besi menggunakan armada kargo darat & laut terbaik.'}
+        </p>
       </div>
 
       {/* Desktop Card (md and above) */}

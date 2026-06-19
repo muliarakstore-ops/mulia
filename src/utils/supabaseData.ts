@@ -83,7 +83,7 @@ export const loadCmsConfig = async (): Promise<FullCmsConfig> => {
       // Map hero config to standard CmsConfig
       heroTitle: pageCms?.hero_main_title || DEFAULT_CMS.heroTitle,
       heroSubTitle: pageCms?.hero_sub_title || DEFAULT_CMS.heroSubTitle,
-      heroDescription: pageCms?.hero_sub_title || DEFAULT_CMS.heroDescription,
+      heroDescription: pageCms?.hero_description || DEFAULT_CMS.heroDescription,
       heroSubTopTitle: pageCms?.hero_sub_top_title || '',
       heroBgImageUrl: pageCms?.hero_bg_image_url || '',
 
@@ -126,6 +126,7 @@ export const saveCmsConfig = async (config: FullCmsConfig): Promise<boolean> => 
     const pageUpdates = {
       hero_main_title: config.heroTitle,
       hero_sub_title: config.heroSubTitle,
+      hero_description: config.heroDescription || '',
       hero_sub_top_title: config.heroSubTopTitle || '',
       hero_bg_image_url: config.heroBgImageUrl || '',
       catalog_main_title: config.catalogMainTitle || '',
@@ -375,10 +376,12 @@ export const getAnalyticsStats = async () => {
       .select('*', { count: 'exact', head: true })
       .eq('event_type', 'visit');
 
-    const { count: screentimeCount } = await supabase
+    const { data: screentimeData } = await supabase
       .from('analytics_metrics')
-      .select('*', { count: 'exact', head: true })
+      .select('screentime_seconds')
       .eq('event_type', 'screentime');
+
+    const totalScreentime = (screentimeData || []).reduce((acc: number, row: any) => acc + (row.screentime_seconds || 0), 0);
 
     const { count: shippingCount } = await supabase
       .from('analytics_metrics')
@@ -387,12 +390,28 @@ export const getAnalyticsStats = async () => {
 
     return {
       visits: visitsCount || 0,
-      screentime: screentimeCount || 0,
+      screentime: totalScreentime || 0,
       shippingChecks: shippingCount || 0
     };
   } catch (e) {
     console.error('Error fetching analytics stats:', e);
     return { visits: 0, screentime: 0, shippingChecks: 0 };
+  }
+};
+
+export const getRawVisits = async (): Promise<{ created_at: string }[]> => {
+  if (!isSupabaseConfigured()) return [];
+  try {
+    const { data, error } = await supabase
+      .from('analytics_metrics')
+      .select('created_at')
+      .eq('event_type', 'visit')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    return (data || []) as { created_at: string }[];
+  } catch (e) {
+    console.error('Error fetching raw visits:', e);
+    return [];
   }
 };
 
@@ -611,6 +630,36 @@ export const saveSupabaseDesign = async (design: {
     return true;
   } catch (e) {
     console.error('Error saving design:', e);
+    return false;
+  }
+};
+
+export const deleteSupabaseVideo = async (id: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
+  try {
+    const { error } = await supabase
+      .from('creative_videos')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error('Error deleting video:', e);
+    return false;
+  }
+};
+
+export const deleteSupabaseDesign = async (id: string): Promise<boolean> => {
+  if (!isSupabaseConfigured()) return false;
+  try {
+    const { error } = await supabase
+      .from('creative_designs')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (e) {
+    console.error('Error deleting design:', e);
     return false;
   }
 };

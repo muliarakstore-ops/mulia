@@ -15,23 +15,40 @@ import {
   saveSupabaseService, 
   deleteSupabaseService, 
   getAnalyticsStats, 
+  getRawVisits,
   getLeadsData, 
   updateLeadStatus, 
   getSupabaseTransactions, 
   saveSupabaseTransaction,
+  getSupabaseVideos,
+  saveSupabaseVideo,
+  deleteSupabaseVideo,
+  getSupabaseDesigns,
+  saveSupabaseDesign,
+  deleteSupabaseDesign,
   FullCmsConfig
 } from '../../utils/supabaseData';
 
+import OverviewSection from '../../components/admin/OverviewSection';
+import CmsSection from '../../components/admin/CmsSection';
+import ProfileSection from '../../components/admin/ProfileSection';
+import CatalogSection from '../../components/admin/CatalogSection';
+import ServicesSection from '../../components/admin/ServicesSection';
+import CreativeSection from '../../components/admin/CreativeSection';
+import BusinessSection from '../../components/admin/BusinessSection';
+import SettingsSection from '../../components/admin/SettingsSection';
+
 export default function AdminDashboard() {
-  const [activeMenu, setActiveMenu] = useState<'overview' | 'cms' | 'profile' | 'catalog' | 'services' | 'creative_overview' | 'creative_plan' | 'creative_eval' | 'biz_financials' | 'biz_ledger' | 'biz_analysis' | 'settings'>('overview');
+  const [activeMenu, setActiveMenu] = useState<'overview' | 'cms' | 'profile' | 'catalog' | 'services' | 'creative' | 'biz_financials' | 'biz_ledger' | 'biz_analysis' | 'settings'>('overview');
   const [cmsConfig, setCmsConfig] = useState<FullCmsConfig>(DEFAULT_CMS);
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<IncludedService[]>([]);
   const [isClient, setIsClient] = useState(false);
 
   // Analytics Stats
-  const [visits, setVisits] = useState<number>(1248);
-  const [inquiries, setInquiries] = useState<number>(187);
+  const [visits, setVisits] = useState<number>(0);
+  const [inquiries, setInquiries] = useState<number>(0);
+  const [rawVisits, setRawVisits] = useState<{ created_at: string }[]>([]);
   const [inquiryLogs, setInquiryLogs] = useState<{ timestamp: string; type: string }[]>([]);
 
   // CRUD Product Modal State
@@ -57,18 +74,17 @@ export default function AdminDashboard() {
   const [srvDescription, setSrvDescription] = useState('');
 
   // Creative Team State
-  const [creativeTasks, setCreativeTasks] = useState([
-    { id: 1, title: 'Desain Banner Promo Ramadan', category: 'Instagram Feed', status: 'Review', designer: 'Andi', deadline: '2026-06-10' },
-    { id: 2, title: 'Video Tiktok Review Rak Single', category: 'TikTok Video', status: 'In Progress', designer: 'Budi', deadline: '2026-06-08' },
-    { id: 3, title: 'Desain Brosur Brosur Gondola V2', category: 'Brosur Cetak', status: 'Approved', designer: 'Citra', deadline: '2026-06-04' },
-    { id: 4, title: 'Copywriting Landing Page Mulia Rak', category: 'Copywriting', status: 'Published', designer: 'Dina', deadline: '2026-06-01' }
-  ]);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskCategory, setNewTaskCategory] = useState('Instagram Feed');
-  const [newTaskDesigner, setNewTaskDesigner] = useState('Andi');
+  const [creativeVideos, setCreativeVideos] = useState<any[]>([]);
+  const [creativeDesigns, setCreativeDesigns] = useState<any[]>([]);
 
   // Business Dashboard Financial State
-  const [transactions, setTransactions] = useState([
+  const [transactions, setTransactions] = useState<{
+    id: number;
+    date: string;
+    desc: string;
+    type: 'penjualan' | 'pengeluaran' | 'permodalan';
+    amount: number;
+  }[]>([
     { id: 1, date: '2026-06-05', desc: 'Penjualan Rak Gondola Toko Kelontong Depok', type: 'penjualan', amount: 15400000 },
     { id: 2, date: '2026-06-04', desc: 'Biaya Solar Mobil Kargo & Pengiriman', type: 'pengeluaran', amount: 850000 },
     { id: 3, date: '2026-06-03', desc: 'Penambahan Modal Owner (Permodalan)', type: 'permodalan', amount: 50000000 },
@@ -93,23 +109,32 @@ export default function AdminDashboard() {
   useEffect(() => {
     const initData = async () => {
       try {
-        const [supabaseCms, supabaseProds, supabaseServices, stats, leadsData, txs] = await Promise.all([
+        const [supabaseCms, supabaseProds, supabaseServices, stats, leadsData, txs, rawVisitsData, videos, designs] = await Promise.all([
           loadCmsConfig(),
           getSupabaseProducts(),
           getSupabaseServices(),
           getAnalyticsStats(),
           getLeadsData(),
-          getSupabaseTransactions()
+          getSupabaseTransactions(),
+          getRawVisits(),
+          getSupabaseVideos(),
+          getSupabaseDesigns()
         ]);
 
         if (supabaseCms) setCmsConfig(supabaseCms);
         if (supabaseProds && supabaseProds.length > 0) setProducts(supabaseProds);
         if (supabaseServices && supabaseServices.length > 0) setServices(supabaseServices);
+        if (videos) setCreativeVideos(videos);
+        if (designs) setCreativeDesigns(designs);
         
         if (stats) {
-          setVisits(stats.visits + 1248);
-          setScreentime(stats.screentime || 320); // Baseline mockup in seconds or minutes
-          setShippingChecks(stats.shippingChecks + 412); // Baseline + live count
+          setVisits(stats.visits);
+          setScreentime(stats.screentime || 0); // Active session screentime in seconds
+          setShippingChecks(stats.shippingChecks);
+        }
+
+        if (rawVisitsData) {
+          setRawVisits(rawVisitsData);
         }
 
         if (leadsData && leadsData.length > 0) {
@@ -122,13 +147,8 @@ export default function AdminDashboard() {
             type: `Leads ${l.type === 'product' ? 'Produk' : 'Layanan'}: ${l.customer_name} (${l.customer_phone})`
           })));
         } else {
-          setInquiries(187);
-          const defaultLogs = [
-            { timestamp: new Date(Date.now() - 3600000).toISOString(), type: 'Produk: Rak Gondola Single (Satu Sisi)' },
-            { timestamp: new Date(Date.now() - 7200000).toISOString(), type: 'Cek Ongkir: DKI Jakarta' },
-            { timestamp: new Date(Date.now() - 14400000).toISOString(), type: 'Konsultasi Umum WhatsApp' }
-          ];
-          setInquiryLogs(defaultLogs);
+          setInquiries(0);
+          setInquiryLogs([]);
         }
 
         if (txs && txs.length > 0) {
@@ -158,6 +178,25 @@ export default function AdminDashboard() {
     setTimeout(() => {
       setToastMessage(null);
     }, 3000);
+  };
+
+  // Handle Image Upload with 2.5MB limit
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'heroBgImageUrl' | 'convPhoneImageUrl') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2.5 * 1024 * 1024) {
+      alert('Ukuran file gambar maksimal adalah 2.5MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCmsConfig(prev => ({
+        ...prev,
+        [field]: reader.result as string
+      }));
+      showToast('Gambar berhasil diunggah!');
+    };
+    reader.readAsDataURL(file);
   };
 
   // Handle CMS Save
@@ -373,34 +412,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Add Creative Task
-  const handleAddCreativeTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTaskTitle) return;
-    const newTask = {
-      id: Date.now(),
-      title: newTaskTitle,
-      category: newTaskCategory,
-      status: 'In Progress',
-      designer: newTaskDesigner,
-      deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 5 days from now
-    };
-    setCreativeTasks([...creativeTasks, newTask]);
-    setNewTaskTitle('');
-    showToast('Tugas Kreatif Baru Berhasil Ditambahkan!');
-  };
-
-  // Change Task Status
-  const handleUpdateTaskStatus = (id: number, nextStatus: string) => {
-    const updated = creativeTasks.map(t => {
-      if (t.id === id) {
-        return { ...t, status: nextStatus };
-      }
-      return t;
-    });
-    setCreativeTasks(updated);
-    showToast(`Status tugas diubah ke ${nextStatus}!`);
-  };
 
   // Add Transaction
   const handleAddTransaction = (e: React.FormEvent) => {
@@ -553,16 +564,14 @@ export default function AdminDashboard() {
                 </svg>
                 <span>Profile</span>
               </button>
-            </div>
-
-            {/* Category: Tim Kreatif */}
+            </div>            {/* Category: Tim Kreatif */}
             <div className="space-y-1.5">
               <div className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest pl-3 pb-1 pt-1">Tim Kreatif</div>
               
               <button
-                onClick={() => setActiveMenu('creative_overview')}
+                onClick={() => setActiveMenu('creative')}
                 className={`sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
-                  activeMenu === 'creative_overview'
+                  activeMenu === 'creative'
                     ? 'bg-white/15 text-white shadow-sm'
                     : 'text-white/70 hover:bg-white/5 hover:text-white'
                 }`}
@@ -570,35 +579,7 @@ export default function AdminDashboard() {
                 <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                 </svg>
-                <span>Campaigns</span>
-              </button>
-
-              <button
-                onClick={() => setActiveMenu('creative_plan')}
-                className={`sidebar-btn w-full flex items-center gap-3 pl-4 pr-3 py-2.5 text-xs font-bold transition-all cursor-pointer rounded-l-3xl ${
-                  activeMenu === 'creative_plan'
-                    ? 'active-cutout'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white mr-4 rounded-3xl'
-                }`}
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                </svg>
-                <span>Content Planner</span>
-              </button>
-
-              <button
-                onClick={() => setActiveMenu('creative_eval')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
-                  activeMenu === 'creative_eval'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2h-2a2 2 0 00-2 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <span>Performance</span>
+                <span>Tim Kreatif</span>
               </button>
             </div>
 
@@ -744,1346 +725,120 @@ export default function AdminDashboard() {
         
         {/* SECTION 1: OVERVIEW */}
         {activeMenu === 'overview' && (
-          <div className="space-y-8 animate-fadeIn">
-            
-            {/* KPI Metric cards - Gradient colored blocks */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* 1. Total Kunjungan */}
-              <div className="bg-gradient-to-br from-[#0ea5e9] to-[#0284c7] text-white p-6 rounded-3xl shadow-xl shadow-sky-650/10 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Total Kunjungan</span>
-                  <span className="text-3xl font-black block">{visits}</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">Trafik Aktif</span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
-                  👥
-                </div>
-              </div>
-
-              {/* 2. Total Percakapan/Leads (Main Card) */}
-              <div className="bg-gradient-to-br from-[#2563eb] to-[#1d4ed8] text-white p-6 rounded-3xl shadow-xl shadow-blue-650/10 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Total Leads / Chat</span>
-                  <span className="text-3xl font-black block">{inquiries}</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">{leadsProduct.length} Produk | {leadsService.length} Layanan</span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
-                  💬
-                </div>
-              </div>
-
-              {/* 3. Total Cek Ongkir */}
-              <div className="bg-gradient-to-br from-[#06b6d4] to-[#0891b2] text-white p-6 rounded-3xl shadow-xl shadow-cyan-650/10 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Total Cek Ongkir</span>
-                  <span className="text-3xl font-black block">{shippingChecks}</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">Kalkulator Logistik</span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
-                  🚚
-                </div>
-              </div>
-
-              {/* 4. Screentime User */}
-              <div className="bg-gradient-to-br from-indigo-600 to-purple-750 text-white p-6 rounded-3xl shadow-xl shadow-indigo-650/10 flex items-center justify-between">
-                <div className="space-y-1">
-                  <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Screentime User</span>
-                  <span className="text-3xl font-black block">{(screentime / 60).toFixed(1)} Mnt</span>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full inline-block font-semibold">Rata-rata Durasi Sesi</span>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-xl">
-                  ⏱️
-                </div>
-              </div>
-            </div>
-
-            {/* Sub Leads Tables (a. Leads Produk & b. Leads Layanan) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* a. Leads Produk Table */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <span>📦</span> Leads Produk
-                  </h3>
-                  <span className="bg-sky-50 text-primary-blue text-[9px] px-2 py-0.5 rounded-full font-bold uppercase">
-                    {leadsProduct.length} Leads
-                  </span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 text-slate-400 font-bold uppercase border-b border-slate-100">
-                        <th className="p-3">Nama</th>
-                        <th className="p-3">Kontak WA</th>
-                        <th className="p-3">Detail Percakapan / Deskripsi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                      {leadsProduct.slice(0, 5).map((l, index) => (
-                        <tr key={l.id || index} className="hover:bg-slate-50/50">
-                          <td className="p-3 font-bold text-slate-900">{l.customer_name}</td>
-                          <td className="p-3 text-sky-600 font-mono">{l.customer_phone}</td>
-                          <td className="p-3 truncate max-w-[200px] text-slate-500">{l.message || 'N/A'}</td>
-                        </tr>
-                      ))}
-                      {leadsProduct.length === 0 && (
-                        <tr>
-                          <td colSpan={3} className="p-6 text-center text-slate-400 italic">Belum ada leads produk masuk.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* b. Leads Layanan Table */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                    <span>🛠️</span> Leads Layanan
-                  </h3>
-                  <span className="bg-indigo-50 text-indigo-600 text-[9px] px-2 py-0.5 rounded-full font-bold uppercase">
-                    {leadsService.length} Leads
-                  </span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 text-slate-400 font-bold uppercase border-b border-slate-100">
-                        <th className="p-3">Nama</th>
-                        <th className="p-3">Kontak WA</th>
-                        <th className="p-3">Detail Percakapan / Deskripsi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                      {leadsService.slice(0, 5).map((l, index) => (
-                        <tr key={l.id || index} className="hover:bg-slate-50/50">
-                          <td className="p-3 font-bold text-slate-900">{l.customer_name}</td>
-                          <td className="p-3 text-indigo-650 font-mono">{l.customer_phone}</td>
-                          <td className="p-3 truncate max-w-[200px] text-slate-500">{l.message || 'N/A'}</td>
-                        </tr>
-                      ))}
-                      {leadsService.length === 0 && (
-                        <tr>
-                          <td colSpan={3} className="p-6 text-center text-slate-400 italic">Belum ada leads layanan masuk.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* Split layout: 2 filterable charts (Kunjungan & Leads) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
-              {/* Chart 1: Grafik Kunjungan per Waktu */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Grafik Kunjungan</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Statistik jumlah kunjungan halaman depan website</p>
-                  </div>
-                  <div className="flex bg-[#f3f4f6] rounded-xl p-1 text-[9px] font-bold text-slate-500 self-start sm:self-auto">
-                    {(['week', 'month', 'year'] as const).map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => setVisitFilter(t)}
-                        className={`px-3 py-1.5 rounded-lg uppercase tracking-wider cursor-pointer transition-all ${
-                          visitFilter === t ? 'bg-[#0284c7] text-white shadow-sm' : 'hover:text-slate-800'
-                        }`}
-                      >
-                        {t === 'week' ? 'Per Minggu' : t === 'month' ? 'Per Bulan' : 'Per Tahun'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="relative pt-4">
-                  <svg className="w-full h-48" viewBox="0 0 500 200" fill="none">
-                    <line x1="0" y1="50" x2="500" y2="50" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-                    <line x1="0" y1="100" x2="500" y2="100" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-                    <line x1="0" y1="150" x2="500" y2="150" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-
-                    {visitFilter === 'week' ? (
-                      <path d="M 20 160 C 100 150, 180 60, 260 90 C 340 120, 420 50, 480 40" stroke="#0284c7" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-                    ) : visitFilter === 'month' ? (
-                      <path d="M 20 120 C 120 140, 220 50, 320 90 C 420 30, 460 70, 480 80" stroke="#0284c7" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-                    ) : (
-                      <path d="M 20 150 C 120 110, 220 140, 320 70 C 420 80, 460 30, 480 20" stroke="#0284c7" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-                    )}
-                    <circle cx="480" cy={visitFilter === 'week' ? 40 : visitFilter === 'month' ? 80 : 20} r="5" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
-                  </svg>
-                  <div className="text-center text-[10px] text-slate-400 font-bold mt-2">
-                    Trafik Kunjungan (Berdasarkan Filter Terpilih)
-                  </div>
-                </div>
-              </div>
-
-              {/* Chart 2: Grafik Leads Keseluruhan per Waktu */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Grafik Leads Keseluruhan</h3>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Statistik konversi leads produk & layanan ritel</p>
-                  </div>
-                  <div className="flex bg-[#f3f4f6] rounded-xl p-1 text-[9px] font-bold text-slate-500 self-start sm:self-auto">
-                    {(['week', 'month', 'year'] as const).map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => setLeadFilter(t)}
-                        className={`px-3 py-1.5 rounded-lg uppercase tracking-wider cursor-pointer transition-all ${
-                          leadFilter === t ? 'bg-[#2563eb] text-white shadow-sm' : 'hover:text-slate-800'
-                        }`}
-                      >
-                        {t === 'week' ? 'Per Minggu' : t === 'month' ? 'Per Bulan' : 'Per Tahun'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="relative pt-4">
-                  <svg className="w-full h-48" viewBox="0 0 500 200" fill="none">
-                    <line x1="0" y1="50" x2="500" y2="50" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-                    <line x1="0" y1="100" x2="500" y2="100" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-                    <line x1="0" y1="150" x2="500" y2="150" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="4" />
-
-                    {leadFilter === 'week' ? (
-                      <path d="M 20 180 C 100 170, 180 130, 260 150 C 340 160, 420 110, 480 100" stroke="#2563eb" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-                    ) : leadFilter === 'month' ? (
-                      <path d="M 20 160 C 120 140, 220 110, 320 130 C 420 80, 460 90, 480 95" stroke="#2563eb" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-                    ) : (
-                      <path d="M 20 170 C 120 150, 220 130, 320 110 C 420 90, 460 60, 480 50" stroke="#2563eb" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-                    )}
-                    <circle cx="480" cy={leadFilter === 'week' ? 100 : leadFilter === 'month' ? 95 : 50} r="5" fill="#2563eb" stroke="#ffffff" strokeWidth="2" />
-                  </svg>
-                  <div className="text-center text-[10px] text-slate-400 font-bold mt-2">
-                    Akumulasi Leads Masuk (Berdasarkan Filter Terpilih)
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Row 4: Timeline Activities (Aktivitas Terkini) */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-5">
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <span>📍</span> Aktivitas Terkini / Terbaru
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative before:absolute before:inset-y-1 before:left-3 before:w-0.5 before:bg-slate-100">
-                {inquiryLogs.map((log, index) => (
-                  <div key={index} className="flex items-start gap-4 text-xs relative z-10 pl-4">
-                    <div className="w-6.5 h-6.5 rounded-full bg-sky-50 border-2 border-sky-400 flex items-center justify-center flex-shrink-0 font-bold text-[10px]">
-                      🔔
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-800 leading-snug">{log.type}</p>
-                      <span className="text-[9px] text-slate-400 block mt-0.5 font-semibold">
-                        {new Date(log.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} • {new Date(log.timestamp).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
+          <OverviewSection
+            visits={visits}
+            inquiries={inquiries}
+            leadsProduct={leadsProduct}
+            leadsService={leadsService}
+            shippingChecks={shippingChecks}
+            screentime={screentime}
+            inquiryLogs={inquiryLogs}
+            rawVisits={rawVisits}
+          />
         )}
 
         {/* SECTION 2: CMS CONTENT */}
         {activeMenu === 'cms' && (
-          <div className="space-y-8 animate-fadeIn max-w-4xl">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">CMS Konten Landing Page</h1>
-              <p className="text-slate-500 text-xs md:text-sm mt-1">Sesuaikan seluruh teks judul, subjudul, gambar, dan tata letak per halaman.</p>
-            </div>
-
-            <form onSubmit={handleSaveCMS} className="space-y-8">
-              {/* #Hero Page */}
-              <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
-                  <span>✨</span> Section Hero
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Sub-Top-Title</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.heroSubTopTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, heroSubTopTitle: e.target.value })}
-                      placeholder="Mulia Rak Store"
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Main-Title (Judul Utama)</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.heroTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, heroTitle: e.target.value })}
-                      placeholder="Penyedia Rak Gondola & Meja Kasir Berkualitas"
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Sub-Title</label>
-                  <textarea
-                    value={cmsConfig.heroSubTitle || ''}
-                    onChange={(e) => setCmsConfig({ ...cmsConfig, heroSubTitle: e.target.value })}
-                    rows={2}
-                    placeholder="Menyediakan perlengkapan minimarket terbaik langsung dari pabrik dengan standar SNI."
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors leading-relaxed"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Image Background URL</label>
-                  <input
-                    type="text"
-                    value={cmsConfig.heroBgImageUrl || ''}
-                    onChange={(e) => setCmsConfig({ ...cmsConfig, heroBgImageUrl: e.target.value })}
-                    placeholder="Masukkan URL gambar background (opsional)"
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* #Katalog Page */}
-              <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
-                  <span>📦</span> Section Katalog Produk
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Main Title</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.catalogMainTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, catalogMainTitle: e.target.value })}
-                      placeholder="Katalog Produk Kami"
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Sub-Title</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.catalogSubTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, catalogSubTitle: e.target.value })}
-                      placeholder="Pilihan produk rak display dan meja kasir terlengkap."
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Jumlah Baris Jajar Produk {"{Mobile}"} (Grid Mobile)</label>
-                    <input
-                      type="number"
-                      value={cmsConfig.catalogColsMobile || 1}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, catalogColsMobile: parseInt(e.target.value) || 1 })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Jumlah Baris Jajar Produk {"{Desktop}"} (Grid Desktop)</label>
-                    <input
-                      type="number"
-                      value={cmsConfig.catalogColsDesktop || 3}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, catalogColsDesktop: parseInt(e.target.value) || 3 })}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* #Layanan Page */}
-              <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
-                  <span>🛠️</span> Section Layanan
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Main-Title</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.servicesMainTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, servicesMainTitle: e.target.value })}
-                      placeholder="Layanan & Keuntungan"
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Sub-Title</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.servicesSubTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, servicesSubTitle: e.target.value })}
-                      placeholder="Mengapa memilih kami sebagai partner bisnis ritel Anda?"
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* #Cek Ongkir Page */}
-              <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
-                  <span>🚚</span> Section Cek Ongkir
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Main-Title</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.shippingMainTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, shippingMainTitle: e.target.value })}
-                      placeholder="Cek Estimasi Ongkir"
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Sub-Title</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.shippingSubTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, shippingSubTitle: e.target.value })}
-                      placeholder="Hitung biaya pengiriman logistik berdasarkan jarak lokasi Anda."
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* #Conversation Page */}
-              <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3 flex items-center gap-2">
-                  <span>💬</span> Section Percakapan (CTA)
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Main Title</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.convMainTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, convMainTitle: e.target.value })}
-                      placeholder="Hubungi Kami"
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Sub-Title</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.convSubTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, convSubTitle: e.target.value })}
-                      placeholder="Konsultasikan kebutuhan layout toko Anda secara gratis."
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Card Title (WhatsApp CTA)</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.convCardTitle || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, convCardTitle: e.target.value })}
-                      placeholder="Chat Whatsapp"
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Card Description</label>
-                    <input
-                      type="text"
-                      value={cmsConfig.convCardDescription || ''}
-                      onChange={(e) => setCmsConfig({ ...cmsConfig, convCardDescription: e.target.value })}
-                      placeholder="Tim admin kami siap membalas pesan Anda dalam 24 jam."
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Image Phone (URL)</label>
-                  <input
-                    type="text"
-                    value={cmsConfig.convPhoneImageUrl || ''}
-                    onChange={(e) => setCmsConfig({ ...cmsConfig, convPhoneImageUrl: e.target.value })}
-                    placeholder="Masukkan URL gambar mockup smartphone (opsional)"
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Submit Buttons */}
-              <div className="flex justify-end gap-4 bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm">
-                <button
-                  type="submit"
-                  className="bg-primary-blue hover:bg-primary-blue-hover text-white font-bold px-8 py-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-primary-blue/15 cursor-pointer"
-                >
-                  💾 Simpan Seluruh Konten CMS
-                </button>
-              </div>
-            </form>
-          </div>
+          <CmsSection
+            cmsConfig={cmsConfig}
+            setCmsConfig={setCmsConfig}
+            handleImageUpload={handleImageUpload}
+            handleSaveCMS={handleSaveCMS}
+          />
         )}
 
         {/* SECTION 2B: PROFILE / ABOUT US */}
         {activeMenu === 'profile' && (
-          <div className="space-y-8 animate-fadeIn max-w-4xl">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">Profil Perusahaan / About Us</h1>
-              <p className="text-slate-500 text-xs md:text-sm mt-1">Ubah penjelasan Profil Perusahaan dan Detail Informasi tentang kami pada halaman About Us.</p>
-            </div>
-
-            <form onSubmit={handleSaveCMS} className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Penjelasan Singkat Profil (Footer & About Us)</label>
-                <textarea
-                  value={cmsConfig.aboutText}
-                  onChange={(e) => setCmsConfig({ ...cmsConfig, aboutText: e.target.value })}
-                  rows={4}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary-blue/60 transition-colors leading-relaxed"
-                />
-                <span className="text-[10px] text-slate-400 mt-1 block">Deskripsi ringkas yang muncul pada bagian bawah halaman utama (Footer) dan bagian atas halaman profil.</span>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex justify-end">
-                <button
-                  type="submit"
-                  className="bg-primary-blue hover:bg-primary-blue-hover text-white font-bold px-6 py-3 rounded-xl text-sm transition-all shadow-md shadow-primary-blue/15 cursor-pointer"
-                >
-                  Simpan Profil
-                </button>
-              </div>
-            </form>
-          </div>
+          <ProfileSection
+            cmsConfig={cmsConfig}
+            setCmsConfig={setCmsConfig}
+            handleSaveCMS={handleSaveCMS}
+          />
         )}
 
         {/* SECTION 3: PRODUCT CATALOG */}
         {activeMenu === 'catalog' && (
-          <div className="space-y-8 animate-fadeIn">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">Katalog Produk</h1>
-                <p className="text-slate-500 text-xs md:text-sm mt-1">Kelola data item, harga, dan spesifikasi detail produk rak gondola toko Anda.</p>
-              </div>
-              <button
-                onClick={openAddModal}
-                className="bg-primary-blue hover:bg-primary-blue-hover text-white font-bold px-5 py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-primary-blue/15 flex items-center justify-center gap-2 cursor-pointer self-start sm:self-auto"
-              >
-                <span>➕</span> Tambah Produk Baru
-              </button>
-            </div>
-
-            {/* Products Table */}
-            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs md:text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
-                      <th className="p-4 md:p-5">Gambar</th>
-                      <th className="p-4 md:p-5">Nama Produk</th>
-                      <th className="p-4 md:p-5">Kategori</th>
-                      <th className="p-4 md:p-5">Estimasi Harga</th>
-                      <th className="p-4 md:p-5 text-right">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                    {products.map((product) => (
-                      <tr key={product.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4 md:p-5">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-12 h-9 object-cover rounded-lg border border-slate-200"
-                          />
-                        </td>
-                        <td className="p-4 md:p-5 font-bold text-slate-900">{product.name}</td>
-                        <td className="p-4 md:p-5 uppercase text-[10px] tracking-wider font-extrabold text-slate-400">
-                          {product.category === 'sofa' ? 'Rak Single' : product.category === 'table' ? 'Rak Double' : product.category === 'lighting' ? 'Meja / Display' : 'Aksesoris'}
-                        </td>
-                        <td className="p-4 md:p-5 text-primary-blue font-bold">{product.price}</td>
-                        <td className="p-4 md:p-5 text-right space-x-2">
-                          <button
-                            onClick={() => openEditModal(product)}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase transition-colors cursor-pointer"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteProduct(product.id, product.name)}
-                            className="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase transition-colors cursor-pointer"
-                          >
-                            Hapus
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <CatalogSection
+            products={products}
+            openAddModal={openAddModal}
+            openEditModal={openEditModal}
+            handleDeleteProduct={handleDeleteProduct}
+            isModalOpen={isModalOpen}
+            setIsModalOpen={setIsModalOpen}
+            modalMode={modalMode}
+            prodName={prodName}
+            setProdName={setProdName}
+            prodCategory={prodCategory}
+            setProdCategory={setProdCategory}
+            prodPrice={prodPrice}
+            setProdPrice={setProdPrice}
+            prodImage={prodImage}
+            setProdImage={setProdImage}
+            prodDescription={prodDescription}
+            setProdDescription={setProdDescription}
+            prodSpecs={prodSpecs}
+            setProdSpecs={setProdSpecs}
+            handleSaveProduct={handleSaveProduct}
+          />
         )}
 
         {/* SECTION 4: EDIT SERVICES (LAYANAN) */}
         {activeMenu === 'services' && (
-          <div className="space-y-8 animate-fadeIn">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">Kelola Layanan Termasuk</h1>
-                <p className="text-slate-500 text-xs md:text-sm mt-1">Ubah atau tambahkan jenis benefit pelayanan yang didapatkan pembeli secara gratis.</p>
-              </div>
-              <button
-                onClick={openAddSrvModal}
-                className="bg-primary-blue hover:bg-primary-blue-hover text-white font-bold px-5 py-3 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-primary-blue/15 flex items-center justify-center gap-2 cursor-pointer self-start sm:self-auto"
-              >
-                <span>➕</span> Tambah Layanan Baru
-              </button>
-            </div>
-
-            {/* Services Table */}
-            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs md:text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
-                      <th className="p-4 md:p-5 w-[30%]">Judul Benefit</th>
-                      <th className="p-4 md:p-5 w-[55%]">Penjelasan Deskripsi</th>
-                      <th className="p-4 md:p-5 text-right w-[15%]">Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                    {services.map((srv, index) => (
-                      <tr key={index} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4 md:p-5 font-bold text-slate-900 leading-tight">{srv.title}</td>
-                        <td className="p-4 md:p-5 text-slate-500 text-xs leading-relaxed">{srv.description}</td>
-                        <td className="p-4 md:p-5 text-right space-x-2">
-                          <button
-                            onClick={() => openEditSrvModal(srv, index)}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase transition-colors cursor-pointer"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteService(index, srv.title)}
-                            className="bg-red-50 hover:bg-red-100 text-red-600 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase transition-colors cursor-pointer"
-                          >
-                            Hapus
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <ServicesSection
+            services={services}
+            openAddSrvModal={openAddSrvModal}
+            openEditSrvModal={openEditSrvModal}
+            handleDeleteService={handleDeleteService}
+            isSrvModalOpen={isSrvModalOpen}
+            setIsSrvModalOpen={setIsSrvModalOpen}
+            srvModalMode={srvModalMode}
+            srvTitle={srvTitle}
+            setSrvTitle={setSrvTitle}
+            srvDescription={srvDescription}
+            setSrvDescription={setSrvDescription}
+            handleSaveService={handleSaveService}
+          />
+        )}
+        
+        {/* TIM KREATIF */}
+        {activeMenu === 'creative' && (
+          <CreativeSection
+            videos={creativeVideos}
+            designs={creativeDesigns}
+            onReloadVideos={async () => {
+              const vids = await getSupabaseVideos();
+              setCreativeVideos(vids);
+            }}
+            onReloadDesigns={async () => {
+              const des = await getSupabaseDesigns();
+              setCreativeDesigns(des);
+            }}
+            onDeleteVideo={deleteSupabaseVideo}
+            onDeleteDesign={deleteSupabaseDesign}
+          />
         )}
 
-        {/* TIM KREATIF - SUB-MENU 1: OVERVIEW KREATIF */}
-        {activeMenu === 'creative_overview' && (
-          <div className="space-y-8 animate-fadeIn">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">Overview Kreatif</h1>
-              <p className="text-slate-500 text-xs md:text-sm mt-1">Status kampanye pemasaran, sebaran beban kerja desainer, dan metrik performa konten kreatif.</p>
-            </div>
-
-            {/* Campaign Overview Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-2">
-                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Kampanye Aktif</span>
-                <span className="text-2xl font-black text-slate-950 block">4 Kampanye</span>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-2">
-                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Konten Terbit (Minggu Ini)</span>
-                <span className="text-2xl font-black text-slate-950 block">18 Video/Feed</span>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-2">
-                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Estimasi Jangkauan</span>
-                <span className="text-2xl font-black text-primary-blue block">42.5K Views</span>
-              </div>
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/60 shadow-sm space-y-2">
-                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Tugas Dalam Antrian</span>
-                <span className="text-2xl font-black text-amber-500 block">{creativeTasks.filter(t => t.status !== 'Published').length} Draft</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Designer Workload */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-5">
-                <h3 className="text-sm font-bold text-slate-950 uppercase tracking-wider">Beban Kerja Tim Desainer</h3>
-                <div className="space-y-4">
-                  {[
-                    { name: 'Andi (Graphic Designer)', count: creativeTasks.filter(t => t.designer === 'Andi' && t.status !== 'Published').length, color: 'bg-primary-blue' },
-                    { name: 'Budi (Videographer)', count: creativeTasks.filter(t => t.designer === 'Budi' && t.status !== 'Published').length, color: 'bg-indigo-500' },
-                    { name: 'Citra (Illustrator)', count: creativeTasks.filter(t => t.designer === 'Citra' && t.status !== 'Published').length, color: 'bg-purple-500' },
-                    { name: 'Dina (Copywriter)', count: creativeTasks.filter(t => t.designer === 'Dina' && t.status !== 'Published').length, color: 'bg-emerald-500' }
-                  ].map((designer, idx) => (
-                    <div key={idx} className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="font-bold text-slate-700">{designer.name}</span>
-                        <span className="text-slate-400 font-semibold">{designer.count} Tugas Aktif</span>
-                      </div>
-                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                        <div className={`h-full ${designer.color}`} style={{ width: `${Math.min(designer.count * 25, 100)}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Campaign Highlight Box */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-4">
-                <h3 className="text-sm font-bold text-slate-950 uppercase tracking-wider">Highlight Kampanye Utama</h3>
-                <div className="space-y-3">
-                  {[
-                    { title: 'Promo Launching Gondola Premium', reach: '12,400 jangkauan', conversion: '4.8%' },
-                    { title: 'Edukasi Penataan Minimarket Modern', reach: '24,900 jangkauan', conversion: '8.2%' },
-                    { title: 'Testimoni Toko Sembako Surabaya', reach: '5,200 jangkauan', conversion: '3.1%' }
-                  ].map((camp, idx) => (
-                    <div key={idx} className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex justify-between items-center text-xs">
-                      <div>
-                        <p className="font-bold text-slate-900">{camp.title}</p>
-                        <span className="text-[10px] text-slate-400 font-semibold">{camp.reach}</span>
-                      </div>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                        {camp.conversion} Conv
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TIM KREATIF - SUB-MENU 2: KONTEN PLAN (KANBAN) */}
-        {activeMenu === 'creative_plan' && (
-          <div className="space-y-8 animate-fadeIn">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">Konten Plan</h1>
-                <p className="text-slate-500 text-xs md:text-sm mt-1">Kelola papan Kanban rencana publikasi konten media sosial Mulia Rak Store.</p>
-              </div>
-            </div>
-
-            {/* Form Tambah Tugas */}
-            <form onSubmit={handleAddCreativeTask} className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-4 max-w-xl">
-              <h3 className="text-sm font-bold text-slate-950 uppercase tracking-wider">Tambah Tugas Baru</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Judul Project / Konten</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: Video TikTok Estetik"
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Kategori Media</label>
-                  <select
-                    value={newTaskCategory}
-                    onChange={(e) => setNewTaskCategory(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors cursor-pointer"
-                  >
-                    <option value="Instagram Feed">Instagram Feed</option>
-                    <option value="Instagram Story">Instagram Story</option>
-                    <option value="TikTok Video">TikTok Video</option>
-                    <option value="Brosur Cetak">Brosur Cetak</option>
-                    <option value="Copywriting">Copywriting</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Designer / Kreator</label>
-                  <select
-                    value={newTaskDesigner}
-                    onChange={(e) => setNewTaskDesigner(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors cursor-pointer"
-                  >
-                    <option value="Andi">Andi (Graphic Designer)</option>
-                    <option value="Budi">Budi (Videographer)</option>
-                    <option value="Citra">Citra (Illustrator)</option>
-                    <option value="Dina">Dina (Copywriter)</option>
-                  </select>
-                </div>
-                <div className="flex items-end">
-                  <button
-                    type="submit"
-                    className="w-full bg-primary-blue hover:bg-primary-blue-hover text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-primary-blue/15 cursor-pointer"
-                  >
-                    🚀 Tambah Tugas
-                  </button>
-                </div>
-              </div>
-            </form>
-
-            {/* Kanban Board */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              {['In Progress', 'Review', 'Approved', 'Published'].map((status) => (
-                <div key={status} className="bg-slate-100/60 p-4 rounded-3xl border border-slate-200/40 space-y-4">
-                  <div className="flex justify-between items-center px-1">
-                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500">{status}</span>
-                    <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      {creativeTasks.filter(t => t.status === status).length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    {creativeTasks.filter(t => t.status === status).map((task) => (
-                      <div key={task.id} className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-sm space-y-3.5 hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start">
-                          <span className="text-[9px] bg-sky-50 text-primary-blue font-bold px-2 py-0.5 rounded">
-                            {task.category}
-                          </span>
-                        </div>
-                        <h4 className="text-xs font-bold text-slate-900 leading-snug">{task.title}</h4>
-                        <div className="flex justify-between items-center text-[10px] text-slate-400">
-                          <span className="font-semibold text-slate-500">🧑‍💻 {task.designer}</span>
-                          <span>📅 {task.deadline}</span>
-                        </div>
-                        
-                        {/* Quick Status Actions */}
-                        <div className="pt-2 border-t border-slate-100 flex justify-end gap-1.5">
-                          {status !== 'In Progress' && (
-                            <button
-                              onClick={() => handleUpdateTaskStatus(task.id, status === 'Review' ? 'In Progress' : status === 'Approved' ? 'Review' : 'Approved')}
-                              className="text-[9px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-2 py-1 rounded transition-colors"
-                            >
-                              ⬅️
-                            </button>
-                          )}
-                          {status !== 'Published' && (
-                            <button
-                              onClick={() => handleUpdateTaskStatus(task.id, status === 'In Progress' ? 'Review' : status === 'Review' ? 'Approved' : 'Published')}
-                              className="text-[9px] bg-slate-900 hover:bg-slate-800 text-white font-bold px-2 py-1 rounded transition-colors"
-                            >
-                              ➡️
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                    {creativeTasks.filter(t => t.status === status).length === 0 && (
-                      <div className="text-center py-8 text-slate-400 text-xs italic">
-                        Tidak ada project
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TIM KREATIF - SUB-MENU 3: EVALUASI KONTEN */}
-        {activeMenu === 'creative_eval' && (
-          <div className="space-y-8 animate-fadeIn">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">Evaluasi Konten</h1>
-              <p className="text-slate-500 text-xs md:text-sm mt-1">Laporan analitik performa views, likes, dan konversi klik WhatsApp dari postingan kreatif.</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-slate-950 uppercase tracking-wider">Performa Konten Media Sosial</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse text-xs md:text-sm">
-                  <thead>
-                    <tr className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
-                      <th className="p-4">Platform</th>
-                      <th className="p-4">Deskripsi Konten</th>
-                      <th className="p-4">Views</th>
-                      <th className="p-4">Likes</th>
-                      <th className="p-4">WhatsApp Leads</th>
-                      <th className="p-4 text-right">Status Evaluasi</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                    {[
-                      { platform: 'TikTok Video', desc: 'Tips menata toko sembako agar terlihat rapi dan luas', views: '28.4K', likes: '1.2K', leads: 43, eval: 'Performa Sangat Baik (High ROI)' },
-                      { platform: 'Instagram Feed', desc: 'Detail spesifikasi tebal baja tiang rak gondola Mulia', views: '8.1K', likes: '348', leads: 18, eval: 'Edukasi Produk Cukup Stabil' },
-                      { platform: 'TikTok Video', desc: 'Proses pemasangan rak minimarket di kota Malang gratis', views: '14.9K', likes: '760', leads: 31, eval: 'Efektif Menarik Pembeli Daerah' },
-                      { platform: 'Instagram Story', desc: 'Q&A Konsultasi layout toko gratis via WA', views: '2.5K', likes: '120', leads: 29, eval: 'Konversi Tinggi (Interaksi Langsung)' }
-                    ].map((item, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4">
-                          <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider ${
-                            item.platform.includes('TikTok') ? 'bg-black text-white' : 'bg-pink-50 text-pink-600'
-                          }`}>
-                            {item.platform}
-                          </span>
-                        </td>
-                        <td className="p-4 font-bold text-slate-900">{item.desc}</td>
-                        <td className="p-4 text-slate-500">{item.views}</td>
-                        <td className="p-4 text-slate-500">{item.likes}</td>
-                        <td className="p-4 font-bold text-primary-blue">{item.leads} Leads</td>
-                        <td className="p-4 text-right">
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded">
-                            {item.eval}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* DASHBOARD BISNIS - SUB-MENU 1: LAPORAN KEUANGAN */}
-        {activeMenu === 'biz_financials' && (
-          <div className="space-y-8 animate-fadeIn">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">Laporan Keuangan</h1>
-              <p className="text-slate-500 text-xs md:text-sm mt-1">Analisis performa finansial permodalan, pengeluaran operasional, dan laba kotor bisnis.</p>
-            </div>
-
-            {/* Financial Card Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-emerald-600 to-teal-650 text-white p-5 rounded-3xl shadow-sm border border-emerald-500/20 space-y-4">
-                <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Total Penjualan</span>
-                <div className="space-y-1">
-                  <span className="text-xl md:text-2xl font-black block">
-                    Rp {transactions.filter(t => t.type === 'penjualan').reduce((a, b) => a + b.amount, 0).toLocaleString('id-ID')}
-                  </span>
-                  <span className="text-[10px] text-white/80 block">Dari {transactions.filter(t => t.type === 'penjualan').length} invoice penjualan</span>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-rose-500 to-red-600 text-white p-5 rounded-3xl shadow-sm border border-rose-500/20 space-y-4">
-                <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Total Pengeluaran</span>
-                <div className="space-y-1">
-                  <span className="text-xl md:text-2xl font-black block">
-                    Rp {transactions.filter(t => t.type === 'pengeluaran').reduce((a, b) => a + b.amount, 0).toLocaleString('id-ID')}
-                  </span>
-                  <span className="text-[10px] text-white/80 block">Bahan baku & operasional kargo</span>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-5 rounded-3xl shadow-sm border border-indigo-500/20 space-y-4">
-                <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Laba Bersih (Net Profit)</span>
-                <div className="space-y-1">
-                  <span className="text-xl md:text-2xl font-black block">
-                    Rp {(transactions.filter(t => t.type === 'penjualan').reduce((a, b) => a + b.amount, 0) - transactions.filter(t => t.type === 'pengeluaran').reduce((a, b) => a + b.amount, 0)).toLocaleString('id-ID')}
-                  </span>
-                  <span className="text-[10px] text-white/80 block">Margin Keuntungan Bersih</span>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-br from-amber-500 to-orange-600 text-white p-5 rounded-3xl shadow-sm border border-amber-500/20 space-y-4">
-                <span className="text-white/70 text-[10px] font-bold uppercase tracking-wider block">Total Permodalan</span>
-                <div className="space-y-1">
-                  <span className="text-xl md:text-2xl font-black block">
-                    Rp {transactions.filter(t => t.type === 'permodalan').reduce((a, b) => a + b.amount, 0).toLocaleString('id-ID')}
-                  </span>
-                  <span className="text-[10px] text-white/80 block">Injeksi modal & kas owner</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-5 max-w-2xl">
-              <h3 className="text-sm font-bold text-slate-950 uppercase tracking-wider">Persentase Pengeluaran Operasional</h3>
-              <div className="space-y-4">
-                {[
-                  { category: 'Bahan Baku Plat & Baja Pabrik', percent: 65, amount: 'Rp 8,125,000', color: 'bg-rose-500' },
-                  { category: 'Logistik Armada & Solar Pengiriman', percent: 25, amount: 'Rp 3,125,000', color: 'bg-amber-500' },
-                  { category: 'Iklan Digital & Campaign Kreatif', percent: 10, amount: 'Rp 1,250,000', color: 'bg-primary-blue' }
-                ].map((item, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-slate-700">{item.category} ({item.percent}%)</span>
-                      <span className="text-slate-900 font-bold">{item.amount}</span>
-                    </div>
-                    <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color}`} style={{ width: `${item.percent}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* DASHBOARD BISNIS - SUB-MENU 2: PENCATATAN KAS */}
-        {activeMenu === 'biz_ledger' && (
-          <div className="space-y-8 animate-fadeIn">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">Pencatatan Buku Kas</h1>
-              <p className="text-slate-500 text-xs md:text-sm mt-1">Formulir pembukuan kas harian dan pencatatan histori transaksi permodalan serta penjualan.</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Form Input Ledger */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-4 h-fit">
-                <h3 className="text-sm font-bold text-slate-950 uppercase tracking-wider">Input Transaksi Keuangan</h3>
-                <form onSubmit={handleAddTransaction} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Deskripsi Transaksi</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Contoh: Pembelian Cat Powder Coating"
-                      value={txDesc}
-                      onChange={(e) => setTxDesc(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Tipe</label>
-                      <select
-                        value={txType}
-                        onChange={(e) => setTxType(e.target.value as any)}
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors cursor-pointer"
-                      >
-                        <option value="penjualan">Penjualan (+)</option>
-                        <option value="pengeluaran">Pengeluaran (-)</option>
-                        <option value="permodalan">Permodalan (+)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Jumlah (Rupiah)</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Contoh: 5000000"
-                        value={txAmount}
-                        onChange={(e) => setTxAmount(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md cursor-pointer"
-                  >
-                    💾 Catat Transaksi
-                  </button>
-                </form>
-              </div>
-
-              {/* Ledger Table */}
-              <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm lg:col-span-2 space-y-4">
-                <h3 className="text-sm font-bold text-slate-950 uppercase tracking-wider">Histori Jurnal Buku Kas</h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-slate-50 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
-                        <th className="p-3">Tanggal</th>
-                        <th className="p-3">Keterangan</th>
-                        <th className="p-3">Tipe</th>
-                        <th className="p-3 text-right">Jumlah</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                      {transactions.map((tx) => (
-                        <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="p-3 font-mono text-slate-400">{tx.date}</td>
-                          <td className="p-3 font-bold text-slate-900">{tx.desc}</td>
-                          <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider ${
-                              tx.type === 'penjualan' ? 'bg-emerald-50 text-emerald-600' : tx.type === 'pengeluaran' ? 'bg-rose-50 text-rose-600' : 'bg-indigo-50 text-indigo-600'
-                            }`}>
-                              {tx.type}
-                            </span>
-                          </td>
-                          <td className={`p-3 text-right font-bold font-mono ${
-                            tx.type === 'penjualan' ? 'text-emerald-600' : tx.type === 'pengeluaran' ? 'text-rose-600' : 'text-indigo-600'
-                          }`}>
-                            {tx.type === 'pengeluaran' ? '-' : '+'}Rp {tx.amount.toLocaleString('id-ID')}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* DASHBOARD BISNIS - SUB-MENU 3: ANALISIS MODAL & LABA (SIMULATOR PROYEKSI) */}
-        {activeMenu === 'biz_analysis' && (
-          <div className="space-y-8 animate-fadeIn max-w-3xl">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">Analisis Modal & Laba</h1>
-              <p className="text-slate-500 text-xs md:text-sm mt-1">Simulator proyeksi pengembalian modal (ROI) dan margin laba berdasarkan target penjualan bulanan.</p>
-            </div>
-
-            {/* Financial Projection Tool */}
-            <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-              <h3 className="text-sm font-bold text-slate-950 uppercase tracking-wider">Simulator Finansial Bulanan</h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Left Controls */}
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span className="text-slate-500 uppercase tracking-wider">Target Penjualan (Satu Bulan)</span>
-                      <span className="text-primary-blue">Rp 120.000.000</span>
-                    </div>
-                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-sm text-slate-800 text-right">
-                      Rp 120,000,000
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-xs font-bold">
-                      <span className="text-slate-500 uppercase tracking-wider">Estimasi Pengeluaran Pokok & Operasional</span>
-                      <span className="text-rose-600">Rp 48.000.000 (40%)</span>
-                    </div>
-                    <div className="p-3 bg-slate-50 border border-slate-100 rounded-xl font-mono text-sm text-slate-800 text-right">
-                      Rp 48,000,000
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Analytics Outputs */}
-                <div className="bg-slate-900 text-slate-300 p-6 rounded-3xl border border-slate-800 flex flex-col justify-between space-y-6">
-                  <div>
-                    <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">Proyeksi Laba Bersih</span>
-                    <span className="text-2xl font-black text-white block mt-1">Rp 72,000,000 / bln</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 border-t border-slate-800 pt-4">
-                    <div>
-                      <span className="text-slate-500 text-[9px] font-bold uppercase tracking-wider block">Margin Laba</span>
-                      <span className="text-sm font-extrabold text-emerald-400 block mt-0.5">60.00%</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-500 text-[9px] font-bold uppercase tracking-wider block">Proyeksi ROI</span>
-                      <span className="text-sm font-extrabold text-sky-400 block mt-0.5">1.5 Tahun (Sehat)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* DASHBOARD BISNIS SUB-MENUS */}
+        {(activeMenu === 'biz_financials' || activeMenu === 'biz_ledger' || activeMenu === 'biz_analysis') && (
+          <BusinessSection
+            activeMenu={activeMenu}
+            transactions={transactions}
+            txDesc={txDesc}
+            setTxDesc={setTxDesc}
+            txType={txType}
+            setTxType={setTxType}
+            txAmount={txAmount}
+            setTxAmount={setTxAmount}
+            handleAddTransaction={handleAddTransaction}
+          />
         )}
 
         {/* SECTION 5: SETTINGS */}
         {activeMenu === 'settings' && (
-          <div className="space-y-8 animate-fadeIn max-w-2xl">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-950">Pengaturan Sistem</h1>
-              <p className="text-slate-500 text-xs md:text-sm mt-1">Pengaturan internal sistem administrator dan pembersihan data.</p>
-            </div>
-
-            <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-base font-bold text-slate-900">Database Reset Pabrik</h3>
-                <p className="text-slate-500 text-xs leading-relaxed">
-                  Menyetel ulang seluruh isi konfigurasi CMS, WhatsApp admin, catalog produk, included services, serta statistik analytics logs kembali ke data default pabrik yang pertama kali dibuat.
-                </p>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100">
-                <button
-                  onClick={handleResetData}
-                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-red-600/15 cursor-pointer"
-                >
-                  ⚠ Reset Database ke Default
-                </button>
-              </div>
-            </div>
-          </div>
+          <SettingsSection handleResetData={handleResetData} />
         )}
-
         </div>
       </main>
-
-      {/* CRUD Product Modal Dialog Backdrop */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
-          <div className="absolute inset-0 cursor-pointer" onClick={() => setIsModalOpen(false)} />
-          
-          <div className="relative bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200/60 flex flex-col max-h-[85vh] animate-fadeIn">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-base md:text-lg font-extrabold text-slate-950">
-                {modalMode === 'add' ? 'Tambah Produk Baru' : 'Edit Detail Produk'}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-dark/40 hover:text-slate-dark p-1 cursor-pointer transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Modal Scrollable Form Body */}
-            <form onSubmit={handleSaveProduct} className="flex-1 overflow-y-auto p-6 space-y-5">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Nama Produk</label>
-                <input
-                  type="text"
-                  required
-                  value={prodName}
-                  onChange={(e) => setProdName(e.target.value)}
-                  placeholder="Contoh: Rak Gondola Single"
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Kategori</label>
-                  <select
-                    value={prodCategory}
-                    onChange={(e) => setProdCategory(e.target.value as any)}
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors cursor-pointer"
-                  >
-                    <option value="sofa">Rak Single</option>
-                    <option value="table">Rak Double</option>
-                    <option value="lighting">Meja / Display</option>
-                    <option value="decor">Aksesoris</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Estimasi Harga / Range</label>
-                  <input
-                    type="text"
-                    required
-                    value={prodPrice}
-                    onChange={(e) => setProdPrice(e.target.value)}
-                    placeholder="Contoh: Rp 800.000"
-                    className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">URL Link Gambar Produk</label>
-                <input
-                  type="text"
-                  value={prodImage}
-                  onChange={(e) => setProdImage(e.target.value)}
-                  placeholder="Kosongkan jika ingin memakai gambar default"
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Deskripsi Singkat</label>
-                <textarea
-                  required
-                  value={prodDescription}
-                  onChange={(e) => setProdDescription(e.target.value)}
-                  rows={3}
-                  placeholder="Ketik keterangan ringkasan kegunaan produk..."
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors leading-relaxed"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Spesifikasi Detail (Satu Spec Per Baris)</label>
-                <textarea
-                  value={prodSpecs}
-                  onChange={(e) => setProdSpecs(e.target.value)}
-                  rows={4}
-                  placeholder={`Contoh:\nTinggi Tiang: 180 cm\nPanjang Shelving: 90 cm\nKapasitas Beban: s/d 50 kg`}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors leading-relaxed"
-                />
-              </div>
-
-              {/* Modal Actions */}
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="bg-primary-blue hover:bg-primary-blue-hover text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-primary-blue/15 cursor-pointer"
-                >
-                  Simpan Produk
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* CRUD Service Modal Dialog Backdrop */}
-      {isSrvModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
-          <div className="absolute inset-0 cursor-pointer" onClick={() => setIsSrvModalOpen(false)} />
-          
-          <div className="relative bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden border border-slate-200/60 flex flex-col max-h-[85vh] animate-fadeIn">
-            {/* Modal Header */}
-            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-base md:text-lg font-extrabold text-slate-950">
-                {srvModalMode === 'add' ? 'Tambah Layanan Baru' : 'Edit Detail Layanan'}
-              </h3>
-              <button
-                onClick={() => setIsSrvModalOpen(false)}
-                className="text-slate-dark/40 hover:text-slate-dark p-1 cursor-pointer transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Modal Scrollable Form Body */}
-            <form onSubmit={handleSaveService} className="flex-1 overflow-y-auto p-6 space-y-5">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Judul Layanan / Benefit</label>
-                <input
-                  type="text"
-                  required
-                  value={srvTitle}
-                  onChange={(e) => setSrvTitle(e.target.value)}
-                  placeholder="Contoh: Gratis Ongkir & Pemasangan"
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Deskripsi Lengkap / Penjelasan</label>
-                <textarea
-                  required
-                  value={srvDescription}
-                  onChange={(e) => setSrvDescription(e.target.value)}
-                  rows={4}
-                  placeholder="Ketik detail benefit dan persyaratan terkait layanan ini..."
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-primary-blue/60 transition-colors leading-relaxed"
-                />
-              </div>
-
-              {/* Modal Actions */}
-              <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsSrvModalOpen(false)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="bg-primary-blue hover:bg-primary-blue-hover text-white font-bold px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all shadow-md shadow-primary-blue/15 cursor-pointer"
-                >
-                  Simpan Layanan
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
     </div>
   );

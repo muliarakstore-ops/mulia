@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Navbar from '../../components/Navbar';
-import Footer from '../../components/Footer';
+import Navbar from '../../components/public/Navbar';
+import Footer from '../../components/public/Footer';
 import { getStoredCms, CmsConfig, DEFAULT_CMS } from '../../utils/storage';
 import { loadCmsConfig } from '../../utils/supabaseData';
 

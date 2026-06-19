@@ -1,11 +1,18 @@
-import { IncludedService } from '../constants/mockData';
+import { IncludedService } from '../../constants/mockData';
 
 interface ServicesProps {
   onTriggerService: (serviceName: string) => void;
   services: IncludedService[];
+  servicesMainTitle?: string;
+  servicesSubTitle?: string;
 }
 
-export default function Services({ onTriggerService, services }: ServicesProps) {
+export default function Services({
+  onTriggerService,
+  services,
+  servicesMainTitle,
+  servicesSubTitle,
+}: ServicesProps) {
   // Helpers for getting inline icons
   const getIcon = (title: string, isMobile: boolean = false) => {
     const iconColorClass = isMobile ? "text-white" : "text-primary-blue";
@@ -40,10 +47,10 @@ export default function Services({ onTriggerService, services }: ServicesProps) 
         {/* Title Header - White text on Mobile (bg blue), Slate text on Desktop */}
         <div className="text-left md:text-center md:max-w-2xl md:mx-auto space-y-2">
           <h2 className="text-2xl md:text-4xl font-extrabold text-white md:text-slate-dark tracking-tight">
-            Layanan Termasuk (Included)
+            {servicesMainTitle || 'Layanan Termasuk (Included)'}
           </h2>
           <p className="text-white/80 md:text-slate-dark/60 text-xs md:text-base">
-            Setiap pemesanan rak pertokoan di Mulia Rak Store sudah mencakup paket benefit berikut.
+            {servicesSubTitle || 'Setiap pemesanan rak pertokoan di Mulia Rak Store sudah mencakup paket benefit berikut.'}
           </p>
         </div>
 

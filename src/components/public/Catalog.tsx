@@ -1,15 +1,27 @@
 'use strict';
 import React, { useState, useMemo } from 'react';
-import { Product } from '../types';
-import { PRODUCTS } from '../constants/mockData';
+import { Product } from '../../types';
+import { PRODUCTS } from '../../constants/mockData';
 
 interface CatalogProps {
   onInquireProduct: (product: Product) => void;
   formatIDR: (value: number) => string;
   products: Product[];
+  catalogMainTitle?: string;
+  catalogSubTitle?: string;
+  catalogColsMobile?: number;
+  catalogColsDesktop?: number;
 }
 
-export default function Catalog({ onInquireProduct, formatIDR, products }: CatalogProps) {
+export default function Catalog({
+  onInquireProduct,
+  formatIDR,
+  products,
+  catalogMainTitle,
+  catalogSubTitle,
+  catalogColsMobile,
+  catalogColsDesktop,
+}: CatalogProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [sortOption, setSortOption] = useState<string>('featured');
@@ -64,11 +76,13 @@ export default function Catalog({ onInquireProduct, formatIDR, products }: Catal
       {/* Title Header - Left-aligned, border and padding hidden on mobile */}
       <div className="text-left md:flex justify-between items-end border-b-0 md:border-b border-slate-light pb-0 md:pb-8 space-y-4 md:space-y-0">
         <div className="space-y-1 md:space-y-2">
-          <h2 className="text-2xl md:text-5xl font-extrabold text-slate-dark tracking-tight">Katalog Produk</h2>
+          <h2 className="text-2xl md:text-5xl font-extrabold text-slate-dark tracking-tight">
+            {catalogMainTitle || 'Katalog Produk'}
+          </h2>
           
           {/* Subtitle - Hidden on mobile (hidden md:block) */}
           <p className="hidden md:block text-slate-dark/60 text-sm">
-            Solusi perlengkapan retail presisi untuk kebutuhan bisnis minimarket Anda.
+            {catalogSubTitle || 'Solusi perlengkapan retail presisi untuk kebutuhan bisnis minimarket Anda.'}
           </p>
         </div>
 
@@ -130,7 +144,7 @@ export default function Catalog({ onInquireProduct, formatIDR, products }: Catal
         </p>
       </div>
 
-      {/* Products Grid - 2 columns on Mobile, 4 columns on Desktop */}
+      {/* Products Grid - Dynamic columns based on config */}
       {filteredProducts.length === 0 ? (
         <div className="text-center py-20 bg-slate-light rounded-3xl border border-slate-dark/5">
           <svg className="w-12 h-12 text-slate-dark/25 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -140,7 +154,11 @@ export default function Catalog({ onInquireProduct, formatIDR, products }: Catal
           <p className="text-slate-dark/50 text-xs mt-1">Coba gunakan kata kunci pencarian yang lain.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-10">
+        <div className={`grid ${
+          Number(catalogColsMobile) === 1 ? 'grid-cols-1' : Number(catalogColsMobile) === 3 ? 'grid-cols-3' : 'grid-cols-2'
+        } ${
+          Number(catalogColsDesktop) === 1 ? 'lg:grid-cols-1' : Number(catalogColsDesktop) === 2 ? 'lg:grid-cols-2' : Number(catalogColsDesktop) === 3 ? 'lg:grid-cols-3' : Number(catalogColsDesktop) === 5 ? 'lg:grid-cols-5' : Number(catalogColsDesktop) === 6 ? 'lg:grid-cols-6' : 'lg:grid-cols-4'
+        } gap-3 md:gap-10`}>
           {filteredProducts.map((product) => (
             <div key={product.id} className="glass-card rounded-[1.2rem] md:rounded-3xl overflow-hidden flex flex-col group relative shadow-sm">
               {/* Product Image */}

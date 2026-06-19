@@ -6,20 +6,20 @@ import { Product } from '../types';
 import { PRODUCTS } from '../constants/mockData';
 import { getStoredCms, getStoredProducts, getStoredServices, CmsConfig, DEFAULT_CMS } from '../utils/storage';
 import { INCLUDED_SERVICES, IncludedService } from '../constants/mockData';
-import { loadCmsConfig, getSupabaseProducts, getSupabaseServices, insertAnalyticsEvent, insertLeadRecord } from '../utils/supabaseData';
+import { loadCmsConfig, getSupabaseProducts, getSupabaseServices, insertAnalyticsEvent, insertLeadRecord, FullCmsConfig } from '../utils/supabaseData';
 
 // Component Imports
-import Navbar from '../components/Navbar';
-import Hero from '../components/Hero';
-import Catalog from '../components/Catalog';
-import Services from '../components/Services';
-import ShippingCost from '../components/ShippingCost';
-import Conversation from '../components/Conversation';
-import Footer from '../components/Footer';
-import MobileBottomNav from '../components/MobileBottomNav';
+import Navbar from '../components/public/Navbar';
+import Hero from '../components/public/Hero';
+import Catalog from '../components/public/Catalog';
+import Services from '../components/public/Services';
+import ShippingCost from '../components/public/ShippingCost';
+import Conversation from '../components/public/Conversation';
+import Footer from '../components/public/Footer';
+import MobileBottomNav from '../components/public/MobileBottomNav';
 
 export default function Home() {
-  const [cmsConfig, setCmsConfig] = useState<CmsConfig>(DEFAULT_CMS);
+  const [cmsConfig, setCmsConfig] = useState<FullCmsConfig>(DEFAULT_CMS);
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [services, setServices] = useState<IncludedService[]>(INCLUDED_SERVICES);
   const [isClient, setIsClient] = useState(false);
@@ -55,6 +55,15 @@ export default function Home() {
     } catch (e) {
       console.error(e);
     }
+
+    // Monitor active user screentime: send a 10s increment to database every 10 seconds
+    const interval = setInterval(() => {
+      insertAnalyticsEvent('screentime', 10, { path: '/' });
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, []);
 
   // Format IDR Currency
@@ -67,7 +76,7 @@ export default function Home() {
   };
 
   // Tracking function for analytics
-  const trackInquiry = async (type: string, isLead = false, details?: any) => {
+  const trackInquiry = async (type: string, isLead = false, details?: { type?: 'product' | 'service'; id?: string }) => {
     try {
       const current = localStorage.getItem('mrs_inquiries') || '0';
       localStorage.setItem('mrs_inquiries', (parseInt(current) + 1).toString());
@@ -106,7 +115,7 @@ export default function Home() {
 
   // Open WhatsApp Link for general contact
   const handleWhatsAppSend = () => {
-    trackInquiry('Konsultasi Umum WhatsApp');
+    trackInquiry('Konsultasi Umum WhatsApp', true, { type: 'service', id: 'general' });
     const encodedText = encodeURIComponent(waMessage);
     const url = `https://wa.me/${cmsConfig.waNumber}?text=${encodedText}`;
     window.open(url, '_blank');
@@ -156,27 +165,42 @@ export default function Home() {
         heroDescription={cmsConfig.heroDescription}
         brandName={cmsConfig.brandName}
         brandSuffix={cmsConfig.brandSuffix}
+        heroSubTopTitle={cmsConfig.heroSubTopTitle}
+        heroBgImageUrl={cmsConfig.heroBgImageUrl}
       />
 
       <Catalog
         onInquireProduct={handleInquireProduct}
         formatIDR={formatIDR}
         products={products}
+        catalogMainTitle={cmsConfig.catalogMainTitle}
+        catalogSubTitle={cmsConfig.catalogSubTitle}
+        catalogColsMobile={cmsConfig.catalogColsMobile}
+        catalogColsDesktop={cmsConfig.catalogColsDesktop}
       />
 
       <Services
         onTriggerService={handleServiceInquiry}
         services={services}
+        servicesMainTitle={cmsConfig.servicesMainTitle}
+        servicesSubTitle={cmsConfig.servicesSubTitle}
       />
 
       <ShippingCost
         onSendWhatsAppShipping={handleShippingInquiry}
+        shippingMainTitle={cmsConfig.shippingMainTitle}
+        shippingSubTitle={cmsConfig.shippingSubTitle}
       />
 
       <Conversation
         waMessage={waMessage}
         onSendWhatsApp={handleWhatsAppSend}
         cartItemCount={0}
+        convMainTitle={cmsConfig.convMainTitle}
+        convSubTitle={cmsConfig.convSubTitle}
+        convCardTitle={cmsConfig.convCardTitle}
+        convCardDescription={cmsConfig.convCardDescription}
+        convPhoneImageUrl={cmsConfig.convPhoneImageUrl}
       />
 
       <Footer 

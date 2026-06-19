@@ -5,20 +5,32 @@ interface ConversationProps {
   waMessage: string;
   onSendWhatsApp: () => void;
   cartItemCount: number;
+  convMainTitle?: string;
+  convSubTitle?: string;
+  convCardTitle?: string;
+  convCardDescription?: string;
+  convPhoneImageUrl?: string;
 }
 
 export default function Conversation({
   waMessage,
   onSendWhatsApp,
   cartItemCount,
+  convMainTitle,
+  convSubTitle,
+  convCardTitle,
+  convCardDescription,
+  convPhoneImageUrl,
 }: ConversationProps) {
   return (
     <section id="conversation" className="pt-4 pb-16 md:py-24 px-4 md:px-12 max-w-7xl mx-auto">
       {/* Desktop Header Title (md and above) */}
       <div className="hidden md:block text-center max-w-2xl mx-auto space-y-2 mb-12">
-        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-dark">Pemesanan & Konsultasi Langsung</h2>
+        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-dark">
+          {convMainTitle || 'Pemesanan & Konsultasi Langsung'}
+        </h2>
         <p className="text-slate-dark/60 text-sm">
-          Kirim detail pesanan Anda ke admin WhatsApp kami hanya dengan sekali klik tanpa ribet mengisi formulir.
+          {convSubTitle || 'Kirim detail pesanan Anda ke admin WhatsApp kami hanya dengan sekali klik tanpa ribet mengisi formulir.'}
         </p>
       </div>
 
@@ -30,9 +42,11 @@ export default function Conversation({
             <div className="inline-flex items-center gap-2 bg-primary-blue-light text-primary-blue px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
               ⚡ Instan & Praktis
             </div>
-            <h3 className="text-2xl font-extrabold text-slate-dark">Hubungi Admin Mulia Rak Store</h3>
+            <h3 className="text-2xl font-extrabold text-slate-dark">
+              {convCardTitle || 'Hubungi Admin Mulia Rak Store'}
+            </h3>
             <p className="text-slate-dark/60 text-sm leading-relaxed">
-              Punya pertanyaan atau ingin berkonsultasi mengenai spesifikasi besi, nego harga, serta tata letak toko? Silakan klik tombol di bawah untuk langsung terhubung dengan layanan pelanggan kami di WhatsApp.
+              {convCardDescription || 'Punya pertanyaan atau ingin berkonsultasi mengenai spesifikasi besi, nego harga, serta tata letak toko? Silakan klik tombol di bawah untuk langsung terhubung dengan layanan pelanggan kami di WhatsApp.'}
             </p>
           </div>
 
@@ -68,7 +82,10 @@ export default function Conversation({
             </div>
           </div>
 
-          <div className="h-[calc(100%-100px)] bg-[#efeae2] p-4 flex flex-col justify-between overflow-y-auto pattern-wa">
+          <div 
+            className="h-[calc(100%-100px)] bg-[#efeae2] p-4 flex flex-col justify-between overflow-y-auto pattern-wa bg-cover bg-center"
+            style={convPhoneImageUrl ? { backgroundImage: `url('${convPhoneImageUrl}')` } : undefined}
+          >
             <div className="space-y-4 flex flex-col items-end">
               <div className="bg-white/80 backdrop-blur-sm self-center text-[10px] text-zinc-600 px-3 py-1 rounded-md shadow-sm mb-2">
                 HARI INI
@@ -101,9 +118,11 @@ export default function Conversation({
           <div className="inline-flex items-center gap-1.5 bg-primary-blue-light text-primary-blue px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider mx-auto">
             ⚡ Hubungi Instan
           </div>
-          <h3 className="text-sm font-extrabold text-slate-dark">Tanya / Konsultasi Sekarang</h3>
+          <h3 className="text-sm font-extrabold text-slate-dark">
+            {convCardTitle || 'Tanya / Konsultasi Sekarang'}
+          </h3>
           <p className="text-slate-dark/65 text-[11px] leading-relaxed max-w-xs mx-auto">
-            Punya pertanyaan seputar ukuran rak kustom, nego harga borongan, atau layout ruangan toko? Langsung hubungi admin via WhatsApp.
+            {convCardDescription || 'Punya pertanyaan seputar ukuran rak kustom, nego harga borongan, atau layout ruangan toko? Langsung hubungi admin via WhatsApp.'}
           </p>
         </div>
 
