@@ -29,9 +29,9 @@ export function SVGLineChart({
   gradientId,
   valueSuffix = ''
 }: SVGLineChartProps) {
-  const width = 500;
+  const width = 550;
   const height = 160;
-  const paddingLeftRight = 30;
+  const paddingLeftRight = 25;
   const paddingTop = 15;
   const paddingBottom = 30;
   const chartWidth = width - paddingLeftRight * 2;
@@ -137,17 +137,15 @@ export function SVGLineChart({
         ))}
 
         {points.map((pt, idx) => {
-          const step = labels.length > 12 ? 4 : labels.length > 7 ? 2 : 1;
-          const shouldShow = idx % step === 0 || idx === labels.length - 1;
-          if (!shouldShow) return null;
+          const fontSize = labels.length > 12 ? "6.2" : "7.5";
           return (
             <text
               key={idx}
               x={pt.x}
               y={height - 8}
-              fill="#94a3b8"
-              fontSize="8.5"
-              fontWeight="extrabold"
+              fill="#64748b"
+              fontSize={fontSize}
+              fontWeight="bold"
               textAnchor="middle"
               className="select-none font-sans uppercase tracking-wider"
             >
@@ -372,13 +370,37 @@ export interface DonutSlice {
   abbr: string;
 }
 
-export function StockPieChart() {
-  const stockData: DonutSlice[] = [
-    { name: 'Rak Single', qty: 120, percent: 30, color: '#0284c7', abbr: 'SGL' },
-    { name: 'Rak Double', qty: 160, percent: 40, color: '#6366f1', abbr: 'DBL' },
-    { name: 'Meja Kasir', qty: 80, percent: 20, color: '#10b981', abbr: 'KSR' },
-    { name: 'Aksesoris/Lainnya', qty: 40, percent: 10, color: '#f59e0b', abbr: 'AKS' },
-  ];
+export function StockPieChart({ products }: { products?: any[] }) {
+  const stockData = useMemo(() => {
+    if (!products || products.length === 0) {
+      return [];
+    }
+
+    const total = products.reduce((acc, p) => acc + (p.stock || 0), 0);
+    return products.map((p, idx) => {
+      const colors = ['#0284c7', '#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#f43f5e'];
+      const abbrs = ['SGL', 'END', 'DBL', 'GUD', 'KSR', 'KSL', 'SNC'];
+      const nameParts = p.name.split(' ');
+      const generatedAbbr = nameParts.length > 1 
+        ? nameParts.map((w: string) => w[0]).join('').slice(0, 3).toUpperCase()
+        : p.name.slice(0, 3).toUpperCase();
+      return {
+        name: p.name,
+        qty: p.stock || 0,
+        percent: total > 0 ? Math.round(((p.stock || 0) / total) * 100) : 0,
+        color: colors[idx % colors.length],
+        abbr: generatedAbbr || abbrs[idx % abbrs.length]
+      };
+    });
+  }, [products]);
+
+  if (stockData.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-xs font-semibold">
+        <span>📦 Tidak ada data stok tersedia</span>
+      </div>
+    );
+  }
 
   const totalQty = stockData.reduce((acc, s) => acc + s.qty, 0);
   const radius = 35;
@@ -583,12 +605,57 @@ export function RegionSharePieChart() {
   );
 }
 
-export function StockValuePieChart() {
-  const stockValueData: DonutSlice[] = [
-    { name: 'Rak Single', qty: 120, percent: 45, color: '#0284c7', abbr: 'SGL' },
-    { name: 'Rak Double', qty: 160, percent: 36, color: '#6366f1', abbr: 'DBL' },
-    { name: 'Meja Kasir', qty: 80, percent: 19, color: '#10b981', abbr: 'KSR' },
-  ];
+export function StockValuePieChart({ products }: { products?: any[] }) {
+  const stockValueData = useMemo(() => {
+    if (!products || products.length === 0) {
+      return [];
+    }
+
+    const values = products.map((p) => ({
+      name: p.name,
+      val: p.stockValue !== undefined ? p.stockValue : (p.stock || 0) * (p.min_price || 0)
+    }));
+    const totalVal = values.reduce((acc, v) => acc + v.val, 0);
+
+    return products.map((p, idx) => {
+      const colors = ['#0284c7', '#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#f43f5e'];
+      const val = p.stockValue !== undefined ? p.stockValue : (p.stock || 0) * (p.min_price || 0);
+      const nameParts = p.name.split(' ');
+      const generatedAbbr = nameParts.length > 1 
+        ? nameParts.map((w: string) => w[0]).join('').slice(0, 3).toUpperCase()
+        : p.name.slice(0, 3).toUpperCase();
+      return {
+        name: p.name,
+        qty: p.stock || 0,
+        val,
+        percent: totalVal > 0 ? Math.round((val / totalVal) * 100) : 0,
+        color: colors[idx % colors.length],
+        abbr: generatedAbbr || 'PRD'
+      };
+    });
+  }, [products]);
+
+  if (stockValueData.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-xs font-semibold">
+        <span>💰 Tidak ada aset stok terdaftar</span>
+      </div>
+    );
+  }
+
+  const totalValueSum = useMemo(() => {
+    return stockValueData.reduce((acc, s) => acc + (s.val || 0), 0);
+  }, [stockValueData]);
+
+  const formattedTotal = useMemo(() => {
+    if (totalValueSum >= 1000000000) {
+      return `Rp ${(totalValueSum / 1000000000).toFixed(1)}M`;
+    }
+    if (totalValueSum >= 1000000) {
+      return `Rp ${(totalValueSum / 1000000).toFixed(1)} Jt`;
+    }
+    return `Rp ${totalValueSum.toLocaleString('id-ID')}`;
+  }, [totalValueSum]);
 
   const radius = 35;
   const circumference = 2 * Math.PI * radius;
@@ -662,13 +729,12 @@ export function StockValuePieChart() {
         </svg>
         <div className="absolute flex flex-col items-center justify-center text-center">
           <span className="text-[9px] uppercase font-extrabold text-[#0284c7] tracking-wider">Total</span>
-          <span className="text-sm font-black text-slate-900 font-mono leading-none">Rp 33.6M</span>
+          <span className="text-[10px] font-black text-slate-900 font-mono leading-none break-all max-w-[70px] text-center">{formattedTotal}</span>
         </div>
       </div>
 
       <div className="w-full space-y-2 border-t border-slate-100 pt-3">
         {stockValueData.map((slice, idx) => {
-          const val = slice.name === 'Rak Single' ? 15000000 : slice.name === 'Rak Double' ? 12000000 : 6600000;
           return (
             <div key={idx} className="flex justify-between items-center text-xs bg-slate-50 hover:bg-slate-100/50 p-2 rounded-xl transition-colors">
               <div className="flex items-center gap-2">
@@ -676,7 +742,7 @@ export function StockValuePieChart() {
                 <span className="font-bold text-slate-700">{slice.name} <span className="text-slate-400 font-medium">({slice.abbr})</span></span>
               </div>
               <div className="text-right space-x-1.5 font-mono">
-                <span className="text-slate-950 font-black">Rp {val.toLocaleString('id-ID')}</span>
+                <span className="text-slate-950 font-black">Rp {slice.val.toLocaleString('id-ID')}</span>
                 <span className="text-slate-400 font-semibold">({slice.percent}%)</span>
               </div>
             </div>
@@ -687,13 +753,33 @@ export function StockValuePieChart() {
   );
 }
 
-export function ShippingTypePieChart() {
-  const shippingData = [
-    { name: 'Mandiri', qty: 24, percent: 57, color: '#6366f1', abbr: 'MND' },
-    { name: 'Ekspedisi', qty: 18, percent: 43, color: '#10b981', abbr: 'EXP' }
-  ];
+export function ShippingTypePieChart({ sales }: { sales?: any[] }) {
+  const shippingData = useMemo(() => {
+    if (!sales || sales.length === 0) {
+      return [];
+    }
 
-  const totalQty = 42;
+    const qtyMandiri = sales.filter(s => s.jenis_pengiriman === '#Pasang').length;
+    const qtyEkspedisi = sales.filter(s => s.jenis_pengiriman === '#Ekspedisi').length;
+    const total = qtyMandiri + qtyEkspedisi;
+
+    return [
+      { name: 'Mandiri', qty: qtyMandiri, percent: total > 0 ? Math.round((qtyMandiri / total) * 100) : 0, color: '#6366f1', abbr: 'MND' },
+      { name: 'Ekspedisi', qty: qtyEkspedisi, percent: total > 0 ? Math.round((qtyEkspedisi / total) * 100) : 0, color: '#10b981', abbr: 'EXP' }
+    ];
+  }, [sales]);
+
+  if (shippingData.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-xs font-semibold">
+        <span>🚚 Tidak ada data pengiriman</span>
+      </div>
+    );
+  }
+
+  const totalQty = useMemo(() => {
+    return shippingData.reduce((acc, s) => acc + s.qty, 0);
+  }, [shippingData]);
   const radius = 35;
   const circumference = 2 * Math.PI * radius;
   let accumulatedPercent = 0;

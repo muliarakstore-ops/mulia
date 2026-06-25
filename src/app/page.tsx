@@ -29,7 +29,7 @@ export default function Home() {
       try {
         const [supabaseCms, supabaseProds, supabaseServices] = await Promise.all([
           loadCmsConfig(),
-          getSupabaseProducts(),
+          getSupabaseProducts(true),
           getSupabaseServices()
         ]);
         

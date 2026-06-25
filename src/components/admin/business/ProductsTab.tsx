@@ -1,8 +1,8 @@
 'use strict';
 'use client';
 
-import React from 'react';
-import { Transaction, StockValuePieChart, ShippingTypePieChart, DeliveryCalendar } from './Charts';
+import React, { useMemo, useState } from 'react';
+import { Transaction, SVGLineChart, StockValuePieChart, ShippingTypePieChart, DeliveryCalendar } from './Charts';
 
 interface ProductsTabProps {
   stockValue: number;
@@ -16,6 +16,9 @@ interface ProductsTabProps {
   setProdSalesFilter: (v: 'Monthly' | 'Yearly') => void;
   regionSalesFilter: 'Monthly' | 'Yearly';
   setRegionSalesFilter: (v: 'Monthly' | 'Yearly') => void;
+  products?: any[];
+  rawSales?: any[];
+  shippingOpex?: any[];
 }
 
 export default function ProductsTab({
@@ -29,8 +32,197 @@ export default function ProductsTab({
   prodSalesFilter,
   setProdSalesFilter,
   regionSalesFilter,
-  setRegionSalesFilter
+  setRegionSalesFilter,
+  products = [],
+  rawSales = [],
+  shippingOpex = []
 }: ProductsTabProps) {
+
+  // 1. Total Stock Units
+  const totalStockUnits = useMemo(() => {
+    if (products.length === 0) return 0;
+    return products.reduce((acc, p) => acc + (p.stock || 0), 0);
+  }, [products]);
+
+  // 2. Total Shipments
+  const totalShipmentsCount = useMemo(() => {
+    return rawSales.filter(s => s.jenis_pengiriman === '#Pasang' || s.jenis_pengiriman === '#Ekspedisi').length;
+  }, [rawSales]);
+
+  // 3. Dynamic Product Sales Aggregation
+  const productSalesData = useMemo(() => {
+    if (rawSales.length === 0 || products.length === 0) {
+      return [];
+    }
+
+    const map: Record<string, number> = {};
+    rawSales.forEach(sale => {
+      sale.detail_penjualan_produk?.forEach((item: any) => {
+        const prodId = item.id_produk;
+        map[prodId] = (map[prodId] || 0) + (item.qty_terjual || 0);
+      });
+    });
+
+    return Object.entries(map).map(([id, qty]) => {
+      const p = products.find(prod => prod.id === id);
+      return {
+        name: p ? p.name : 'Produk Custom',
+        qty
+      };
+    }).sort((a, b) => b.qty - a.qty);
+  }, [rawSales, products]);
+
+  // 4. Dynamic Region Sales Aggregation
+  const regionSalesData = useMemo(() => {
+    if (rawSales.length === 0) {
+      return [];
+    }
+
+    const map: Record<string, number> = {};
+    rawSales.forEach(sale => {
+      const qty = sale.detail_penjualan_produk?.reduce((acc: number, item: any) => acc + (item.qty_terjual || 0), 0) || 0;
+      const region = sale.daerah_tujuan || 'Lainnya';
+      map[region] = (map[region] || 0) + qty;
+    });
+
+    return Object.entries(map).map(([name, qty]) => ({ name, qty })).sort((a, b) => b.qty - a.qty);
+  }, [rawSales]);
+
+  // 5. Dynamic Stock Availability Progress Bars
+  const stockBars = useMemo(() => {
+    if (products.length === 0) {
+      return [];
+    }
+
+    const colors = [
+      'from-sky-600 to-sky-400 border border-sky-400/30',
+      'from-indigo-600 to-indigo-400 border border-indigo-400/30',
+      'from-emerald-600 to-emerald-450 border border-emerald-400/30',
+      'from-amber-500 to-amber-400 border border-amber-400/30',
+      'from-violet-600 to-violet-400 border border-violet-400/30'
+    ];
+
+    return products.map((p, idx) => ({
+      name: p.name,
+      cur: p.stock || 0,
+      max: Math.max(100, (p.stock || 0) * 2),
+      color: colors[idx % colors.length]
+    }));
+  }, [products]);
+
+  // 6. Dynamic Self Deliveries (#Pasang)
+  const selfShippingRows = useMemo(() => {
+    if (rawSales.length === 0) {
+      return [];
+    }
+
+    return rawSales
+      .filter(s => s.jenis_pengiriman === '#Pasang')
+      .map(s => {
+        const opex = shippingOpex.find(o => o.nama_pelanggan_terkait === s.id_transaksi);
+        const cost = opex ? Number(opex.nominal_opex || 0) : 0;
+        const qty = s.detail_penjualan_produk?.reduce((acc: number, item: any) => acc + (item.qty_terjual || 0), 0) || 0;
+        const total = s.detail_penjualan_produk?.reduce((acc: number, item: any) => acc + (Number(item.total_revenue_produk || 0)), 0) || 0;
+        return {
+          name: s.nama_pelanggan,
+          area: s.daerah_tujuan,
+          cost,
+          time: new Date(s.waktu_transaksi).toISOString().split('T')[0],
+          qty,
+          total
+        };
+      });
+  }, [rawSales, shippingOpex]);
+
+  // 7. Dynamic Expedition Deliveries (#Ekspedisi)
+  const expShippingRows = useMemo(() => {
+    if (rawSales.length === 0) {
+      return [];
+    }
+
+    return rawSales
+      .filter(s => s.jenis_pengiriman === '#Ekspedisi')
+      .map(s => {
+        const opex = shippingOpex.find(o => o.nama_pelanggan_terkait === s.id_transaksi);
+        const cost = opex ? Number(opex.nominal_opex || 0) : 0;
+        const qty = s.detail_penjualan_produk?.reduce((acc: number, item: any) => acc + (item.qty_terjual || 0), 0) || 0;
+        const total = s.detail_penjualan_produk?.reduce((acc: number, item: any) => acc + (Number(item.total_revenue_produk || 0)), 0) || 0;
+        return {
+          name: s.nama_pelanggan,
+          area: s.daerah_tujuan,
+          cost,
+          time: new Date(s.waktu_transaksi).toISOString().split('T')[0],
+          qty,
+          exp: s.nama_ekspedisi || 'Ekspedisi',
+          total
+        };
+      });
+  }, [rawSales, shippingOpex]);
+
+  // 8. Low Stock Restock Alerts
+  const restockAlerts = useMemo(() => {
+    if (products.length === 0) {
+      return [];
+    }
+
+    return products
+      .filter(p => (p.stock || 0) < 20)
+      .map(p => ({
+        name: p.name,
+        stock: `Sisa ${p.stock} Pcs`,
+        action: p.stock < 10 ? 'Segera kulak hari ini!' : 'Jadwalkan restock minggu ini',
+        isUrgent: p.stock < 10,
+        date: new Date().toISOString().split('T')[0]
+      }));
+  }, [products]);
+
+  const [salesChartFilter, setSalesChartFilter] = useState<'Monthly' | 'Yearly'>('Monthly');
+  const [indicator, setIndicator] = useState<'revenue' | 'unit'>('revenue');
+
+  const dynamicSalesChartData = useMemo(() => {
+    const monthlyRevenue = Array(12).fill(0);
+    const monthlyUnits = Array(12).fill(0);
+    const yearlyRevenue = Array(20).fill(0);
+    const yearlyUnits = Array(20).fill(0);
+
+    rawSales.forEach(s => {
+      const tDate = new Date(s.waktu_transaksi);
+      const revAmt = s.detail_penjualan_produk?.reduce((acc: number, item: any) => acc + Number(item.total_revenue_produk || 0), 0) || 0;
+      const unitQty = s.detail_penjualan_produk?.reduce((acc: number, item: any) => acc + Number(item.qty_terjual || 0), 0) || 0;
+
+      const revAmtJt = revAmt / 1000000; // in millions
+
+      // Month matching (2026)
+      if (tDate.getFullYear() === 2026) {
+        const m = tDate.getMonth();
+        if (m >= 0 && m < 12) {
+          monthlyRevenue[m] += revAmtJt;
+          monthlyUnits[m] += unitQty;
+        }
+      }
+
+      // Year matching (2007 - 2026)
+      const yr = tDate.getFullYear();
+      if (yr >= 2007 && yr <= 2026) {
+        yearlyRevenue[yr - 2007] += revAmtJt;
+        yearlyUnits[yr - 2007] += unitQty;
+      }
+    });
+
+    const roundVal = (arr: number[]) => arr.map(v => Math.round(v * 10) / 10);
+
+    return {
+      Monthly: {
+        revenue: roundVal(monthlyRevenue),
+        unit: monthlyUnits
+      },
+      Yearly: {
+        revenue: roundVal(yearlyRevenue),
+        unit: yearlyUnits
+      }
+    };
+  }, [rawSales]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -42,7 +234,7 @@ export default function ProductsTab({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-white to-slate-50/50 p-6 rounded-2xl border-t-4 border-t-sky-500 border-x border-b border-slate-200/60 shadow-sm shadow-sky-500/[0.03] space-y-3 hover:scale-[1.02] hover:shadow-md hover:shadow-sky-500/[0.06] transition-all duration-300">
           <span className="text-[10px] uppercase font-extrabold text-slate-455 tracking-wider block">Jumlah Stok Keseluruhan</span>
-          <span className="text-2xl md:text-3xl font-black text-sky-600 font-mono block">400 Unit</span>
+          <span className="text-2xl md:text-3xl font-black text-sky-600 font-mono block">{totalStockUnits} Unit</span>
           <span className="text-xs text-slate-500 block font-medium">Gondola & Meja Kasir ready</span>
         </div>
         
@@ -60,8 +252,77 @@ export default function ProductsTab({
 
         <div className="bg-gradient-to-br from-white to-slate-50/50 p-6 rounded-2xl border-t-4 border-t-violet-500 border-x border-b border-slate-200/60 shadow-sm shadow-violet-500/[0.03] space-y-3 hover:scale-[1.02] hover:shadow-md hover:shadow-violet-500/[0.06] transition-all duration-300">
           <span className="text-[10px] uppercase font-extrabold text-slate-455 tracking-wider block">Jumlah Pengiriman Keseluruhan</span>
-          <span className="text-xl md:text-2xl font-black text-violet-650 font-mono block">42 Pengiriman</span>
+          <span className="text-xl md:text-2xl font-black text-violet-650 font-mono block">{totalShipmentsCount} Pengiriman</span>
           <span className="text-xs text-slate-500 block font-medium">Mandiri & Ekspedisi terkirim</span>
+        </div>
+      </div>
+
+      {/* Dynamic Sales Chart (Revenue vs Unit) */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-500 flex items-center gap-1.5">
+              📈 Grafik Penjualan Keseluruhan
+            </h3>
+            <p className="text-[10px] text-slate-400 mt-0.5">Tren penjualan berdasarkan nilai transaksi (Revenue) dan kuantitas barang terjual (Unit).</p>
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Indicator Toggle (Revenue vs Unit) */}
+            <div className="flex gap-1 bg-slate-100 p-0.5 rounded-xl">
+              <button
+                onClick={() => setIndicator('revenue')}
+                className={`px-2.5 py-1 text-[9px] font-bold rounded-lg cursor-pointer transition-all ${
+                  indicator === 'revenue' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                💰 Revenue (Rp)
+              </button>
+              <button
+                onClick={() => setIndicator('unit')}
+                className={`px-2.5 py-1 text-[9px] font-bold rounded-lg cursor-pointer transition-all ${
+                  indicator === 'unit' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                📦 Unit
+              </button>
+            </div>
+
+            {/* Time Filter (Monthly vs Yearly) */}
+            <div className="flex gap-1 bg-slate-100 p-0.5 rounded-xl">
+              <button
+                onClick={() => setSalesChartFilter('Monthly')}
+                className={`px-2.5 py-1 text-[9px] font-bold rounded-lg cursor-pointer transition-all ${
+                  salesChartFilter === 'Monthly' ? 'bg-white text-[#0284c7] shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setSalesChartFilter('Yearly')}
+                className={`px-2.5 py-1 text-[9px] font-bold rounded-lg cursor-pointer transition-all ${
+                  salesChartFilter === 'Yearly' ? 'bg-white text-[#0284c7] shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Yearly
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <SVGLineChart
+            data={dynamicSalesChartData[salesChartFilter][indicator]}
+            labels={
+              salesChartFilter === 'Monthly'
+                ? ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des']
+                : Array.from({ length: 20 }, (_, i) => (2007 + i).toString())
+            }
+            gradientColors={indicator === 'revenue' ? ['#0284c7', '#38bdf8'] : ['#10b981', '#34d399']}
+            strokeColor={indicator === 'revenue' ? '#0284c7' : '#10b981'}
+            gradientId="sales-tab-overall-grad"
+            valueSuffix={indicator === 'revenue' ? 'jt' : ' unit'}
+          />
         </div>
       </div>
 
@@ -74,7 +335,7 @@ export default function ProductsTab({
             <h3 className="text-sm uppercase font-extrabold tracking-wider text-slate-700">📊 Perbandingan Jenis Pengiriman</h3>
             <p className="text-xs text-slate-500">Total armada logistik yang digunakan.</p>
           </div>
-          <ShippingTypePieChart />
+          <ShippingTypePieChart sales={rawSales} />
         </div>
       </div>
 
@@ -98,22 +359,18 @@ export default function ProductsTab({
             </div>
           </div>
           <div className="space-y-3 overflow-y-auto flex-1 pr-1 text-xs">
-            {(prodSalesFilter === 'Monthly' ? [
-              { name: 'Rak Gondola Single Utama', qty: 120 },
-              { name: 'Rak Gondola Double Sambung', qty: 85 },
-              { name: 'Meja Kasir Kayu Minimalis', qty: 12 },
-              { name: 'Keranjang Belanja Plastik', qty: 240 }
-            ] : [
-              { name: 'Rak Gondola Single Utama', qty: 1450 },
-              { name: 'Rak Gondola Double Sambung', qty: 980 },
-              { name: 'Meja Kasir Kayu Minimalis', qty: 150 },
-              { name: 'Keranjang Belanja Plastik', qty: 2800 }
-            ]).map((item, idx) => (
-              <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100/70 transition-colors shadow-2xs">
-                <span className="font-bold text-slate-800 text-xs">{item.name}</span>
-                <span className="font-mono font-black text-xs text-[#0284c7]">{item.qty.toLocaleString('id-ID')} Pcs</span>
+            {productSalesData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 text-xs font-semibold py-12">
+                🛍️ Tidak ada data penjualan produk
               </div>
-            ))}
+            ) : (
+              productSalesData.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl hover:bg-slate-100/70 transition-colors shadow-2xs">
+                  <span className="font-bold text-slate-800 text-xs">{item.name}</span>
+                  <span className="font-mono font-black text-xs text-[#0284c7]">{item.qty.toLocaleString('id-ID')} Pcs</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -136,22 +393,18 @@ export default function ProductsTab({
             </div>
           </div>
           <div className="space-y-3 overflow-y-auto flex-1 pr-1 text-xs">
-            {(regionSalesFilter === 'Monthly' ? [
-              { name: 'Kota Depok', qty: 140 },
-              { name: 'Jakarta Timur', qty: 110 },
-              { name: 'Bekasi', qty: 85 },
-              { name: 'Kabupaten Bogor', qty: 65 }
-            ] : [
-              { name: 'Kota Depok', qty: 1650 },
-              { name: 'Jakarta Timur', qty: 1200 },
-              { name: 'Bekasi', qty: 950 },
-              { name: 'Kabupaten Bogor', qty: 720 }
-            ]).map((item, idx) => (
-              <div key={idx} className="flex justify-between items-center p-3 bg-indigo-50/20 rounded-xl hover:bg-indigo-50/40 transition-colors border border-indigo-100/10 shadow-2xs">
-                <span className="font-bold text-slate-800 text-xs">{item.name}</span>
-                <span className="font-mono font-black text-xs text-indigo-600">{item.qty.toLocaleString('id-ID')} Pcs</span>
+            {regionSalesData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 text-xs font-semibold py-12">
+                📍 Tidak ada data penjualan daerah
               </div>
-            ))}
+            ) : (
+              regionSalesData.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center p-3 bg-indigo-50/20 rounded-xl hover:bg-indigo-50/40 transition-colors border border-indigo-100/10 shadow-2xs">
+                  <span className="font-bold text-slate-800 text-xs">{item.name}</span>
+                  <span className="font-mono font-black text-xs text-indigo-600">{item.qty.toLocaleString('id-ID')} Pcs</span>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -162,7 +415,7 @@ export default function ProductsTab({
             <h3 className="text-sm uppercase font-extrabold tracking-wider text-slate-700">💰 Nilai Aset Stok per Produk</h3>
             <p className="text-xs text-slate-500">Total nilai rupiah aset stok yang tersedia.</p>
           </div>
-          <StockValuePieChart />
+          <StockValuePieChart products={products} />
         </div>
 
         <div className="lg:col-span-7 bg-gradient-to-br from-white to-slate-50/50 p-6 rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-100/40 hover:shadow-md hover:shadow-slate-250/30 transition-all duration-300 flex flex-col justify-between h-full">
@@ -171,35 +424,36 @@ export default function ProductsTab({
             <p className="text-xs text-slate-500">Volume fisik unit barang ready di gudang.</p>
           </div>
           <div className="space-y-5 py-4">
-            {[
-              { name: 'Rak Gondola Single Utama', cur: 120, max: 200, color: 'from-sky-600 to-sky-400 border border-sky-400/30' },
-              { name: 'Rak Gondola Double Sambung', cur: 160, max: 200, color: 'from-indigo-600 to-indigo-400 border border-indigo-400/30' },
-              { name: 'Meja Kasir Kayu Minimalis', cur: 80, max: 100, color: 'from-emerald-600 to-emerald-450 border border-emerald-400/30' },
-              { name: 'Aksesoris/Lainnya', cur: 40, max: 50, color: 'from-amber-500 to-amber-400 border border-amber-400/30' },
-            ].map((p, idx) => {
-              const pct = Math.min(100, Math.round((p.cur / p.max) * 100));
-              return (
-                <div key={idx} className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold text-slate-705">
-                    <span>{p.name}</span>
-                    <span className="font-mono text-slate-900 font-extrabold">{p.cur} / {p.max} Unit <span className="text-slate-400 font-medium">({pct}%)</span></span>
-                  </div>
-                  <div className="w-full bg-slate-50 border border-slate-200/70 p-[3px] rounded-full h-5 flex items-center shadow-inner">
-                    <div 
-                      className={`bg-gradient-to-r ${p.color} h-full rounded-full transition-all duration-700 relative shadow-xs flex items-center justify-end pr-2`} 
-                      style={{ width: `${pct}%` }}
-                    >
-                      <span className="absolute inset-x-0 top-0 h-[30%] bg-white/20 rounded-full" />
-                      {pct > 15 && (
-                        <span className="text-[7.5px] font-black text-white font-mono tracking-wider select-none opacity-90 drop-shadow-xs">
-                          {pct}%
-                        </span>
-                      )}
+            {stockBars.length === 0 ? (
+              <div className="text-center text-slate-400 text-xs font-semibold py-12">
+                Tidak ada produk terdaftar
+              </div>
+            ) : (
+              stockBars.map((p, idx) => {
+                const pct = Math.min(100, Math.round((p.cur / p.max) * 100));
+                return (
+                  <div key={idx} className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold text-slate-705">
+                      <span>{p.name}</span>
+                      <span className="font-mono text-slate-900 font-extrabold">{p.cur} / {p.max} Unit <span className="text-slate-400 font-medium">({pct}%)</span></span>
+                    </div>
+                    <div className="w-full bg-slate-50 border border-slate-200/70 p-[3px] rounded-full h-5 flex items-center shadow-inner">
+                      <div 
+                        className={`bg-gradient-to-r ${p.color} h-full rounded-full transition-all duration-700 relative shadow-xs flex items-center justify-end pr-2`} 
+                        style={{ width: `${pct}%` }}
+                      >
+                        <span className="absolute inset-x-0 top-0 h-[30%] bg-white/20 rounded-full" />
+                        {pct > 15 && (
+                          <span className="text-[7.5px] font-black text-white font-mono tracking-wider select-none opacity-90 drop-shadow-xs">
+                            {pct}%
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -235,27 +489,21 @@ export default function ProductsTab({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {(() => {
-                  const selfData = shipSelfFilter === 'Monthly' ? [
-                    { name: 'Toko Bu Sri', area: 'Depok', cost: 150000, time: '2026-06-18', qty: 20, total: 17150000 },
-                    { name: 'CV. Maju', area: 'Cibinong', cost: 200000, time: '2026-06-10', qty: 5, total: 6200000 }
-                  ] : [
-                    { name: 'Toko Bu Sri', area: 'Depok', cost: 1800000, time: '12x Kirim', qty: 240, total: 205800000 },
-                    { name: 'Ritel Sentosa', area: 'Bogor', cost: 2400000, time: '8x Kirim', qty: 160, total: 137600000 }
-                  ];
-                  const totalCost = selfData.reduce((acc, curr) => acc + curr.cost, 0);
-                  const totalQty = selfData.reduce((acc, curr) => acc + curr.qty, 0);
-                  const totalAmt = selfData.reduce((acc, curr) => acc + curr.total, 0);
-                  const totalShipments = selfData.reduce((acc, curr) => {
-                    if (curr.time.includes('x Kirim')) {
-                       return acc + parseInt(curr.time);
-                    }
-                    return acc + 1;
-                  }, 0);
+                {selfShippingRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-slate-400 font-semibold text-xs bg-white">
+                      Tidak ada data pengiriman mandiri
+                    </td>
+                  </tr>
+                ) : (() => {
+                  const totalCost = selfShippingRows.reduce((acc, curr) => acc + curr.cost, 0);
+                  const totalQty = selfShippingRows.reduce((acc, curr) => acc + curr.qty, 0);
+                  const totalAmt = selfShippingRows.reduce((acc, curr) => acc + curr.total, 0);
+                  const totalShipments = selfShippingRows.length;
                   
                   return (
                     <>
-                      {selfData.map((row, idx) => (
+                      {selfShippingRows.map((row, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-3 font-bold text-slate-900 border-r border-slate-200">{row.name}</td>
                           <td className="p-3 border-r border-slate-200">{row.area}</td>
@@ -311,27 +559,21 @@ export default function ProductsTab({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {(() => {
-                  const expData = shipExpFilter === 'Monthly' ? [
-                    { name: 'Minimarket Sejahtera', area: 'Sukabumi', cost: 450000, time: '2026-06-12', qty: 15, exp: 'JNE Trucking', total: 13950000 },
-                    { name: 'Koperasi Mandiri', area: 'Bandung', cost: 600000, time: '2026-06-05', qty: 12, exp: 'Dakota Cargo', total: 11400000 }
-                  ] : [
-                    { name: 'Minimarket Sejahtera', area: 'Sukabumi', cost: 4500000, time: '10x Kirim', qty: 150, exp: 'JNE Trucking', total: 139500000 },
-                    { name: 'Koperasi Mandiri', area: 'Bandung', cost: 6000000, time: '10x Kirim', qty: 120, exp: 'Dakota Cargo', total: 114000000 }
-                  ];
-                  const totalCost = expData.reduce((acc, curr) => acc + curr.cost, 0);
-                  const totalQty = expData.reduce((acc, curr) => acc + curr.qty, 0);
-                  const totalAmt = expData.reduce((acc, curr) => acc + curr.total, 0);
-                  const totalShipments = expData.reduce((acc, curr) => {
-                    if (curr.time.includes('x Kirim')) {
-                      return acc + parseInt(curr.time);
-                    }
-                    return acc + 1;
-                  }, 0);
+                {expShippingRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-slate-400 font-semibold text-xs bg-white">
+                      Tidak ada data pengiriman ekspedisi
+                    </td>
+                  </tr>
+                ) : (() => {
+                  const totalCost = expShippingRows.reduce((acc, curr) => acc + curr.cost, 0);
+                  const totalQty = expShippingRows.reduce((acc, curr) => acc + curr.qty, 0);
+                  const totalAmt = expShippingRows.reduce((acc, curr) => acc + curr.total, 0);
+                  const totalShipments = expShippingRows.length;
                   
                   return (
                     <>
-                      {expData.map((row, idx) => (
+                      {expShippingRows.map((row, idx) => (
                         <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-3 font-bold text-slate-900 border-r border-slate-200">{row.name}</td>
                           <td className="p-3 border-r border-slate-200">{row.area}</td>
@@ -365,29 +607,30 @@ export default function ProductsTab({
           <span className="px-2.5 py-0.5 rounded-full bg-rose-50 border border-rose-200/65 font-black text-rose-700 text-[9px] uppercase tracking-wider">Log Alert</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-          {[
-            { name: 'Tiang Gondola T150', stock: 'Sisa 8 Pcs', action: 'Segera kulak hari ini!', isUrgent: true, date: '2026-06-23' },
-            { name: 'Cat Powder Coating Sky Blue', stock: 'Sisa 5 Kg', action: '3 hari lagi', isUrgent: false, date: '2026-06-20' },
-            { name: 'Plat Besi Gulung 1.2mm', stock: 'Sisa 2 Roll', action: '5 hari lagi', isUrgent: false, date: '2026-06-18' },
-            { name: 'Baut & Spacer M6', stock: 'Sisa 50 Pcs', action: '7 hari lagi', isUrgent: false, date: '2026-06-15' }
-          ].map((alertItem, idx) => (
-            <div key={idx} className={`p-4.5 rounded-2xl border flex flex-col justify-between gap-4 transition-colors ${
-              alertItem.isUrgent ? 'bg-rose-50 border-rose-200/60 text-rose-900' : 'bg-amber-50/60 border-amber-200/60 text-amber-900'
-            }`}>
-              <div className="flex justify-between items-start font-bold">
-                <div className="space-y-0.5">
-                  <span className="text-xs md:text-sm block">{alertItem.name}</span>
-                  <span className="text-[9px] opacity-60 font-mono block">{alertItem.date}</span>
-                </div>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-black tracking-wide flex-shrink-0 ${
-                  alertItem.isUrgent ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
-                }`}>{alertItem.stock}</span>
-              </div>
-              <span className="text-xs opacity-90 font-semibold">
-                {alertItem.isUrgent ? '🚨 ' : '⚠️ '} **Jadwal:** {alertItem.action}
-              </span>
+          {restockAlerts.length === 0 ? (
+            <div className="col-span-4 text-center text-slate-400 text-xs font-semibold py-8 bg-white border border-slate-200/50 rounded-2xl">
+              ✅ Semua stok produk dalam batas aman
             </div>
-          ))}
+          ) : (
+            restockAlerts.map((alertItem, idx) => (
+              <div key={idx} className={`p-4.5 rounded-2xl border flex flex-col justify-between gap-4 transition-colors ${
+                alertItem.isUrgent ? 'bg-rose-50 border-rose-200/60 text-rose-900' : 'bg-amber-50/60 border-amber-200/60 text-amber-900'
+              }`}>
+                <div className="flex justify-between items-start font-bold">
+                  <div className="space-y-0.5">
+                    <span className="text-xs md:text-sm block">{alertItem.name}</span>
+                    <span className="text-[9px] opacity-60 font-mono block">{alertItem.date}</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded text-[9px] font-black tracking-wide flex-shrink-0 ${
+                    alertItem.isUrgent ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'
+                  }`}>{alertItem.stock}</span>
+                </div>
+                <span className="text-xs opacity-90 font-semibold">
+                  {alertItem.isUrgent ? '🚨 ' : '⚠️ '} **Jadwal:** {alertItem.action}
+                </span>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

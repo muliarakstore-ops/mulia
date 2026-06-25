@@ -1,7 +1,4 @@
-'use strict';
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Transaction, SVGLineChart, StockPieChart } from './Charts';
 
 interface OverviewTabProps {
@@ -15,10 +12,11 @@ interface OverviewTabProps {
   opexTotal: number;
   netProfit: number;
   totalModal: number;
-  revenueFilter: 'Weekly' | 'Monthly' | 'Yearly';
-  setRevenueFilter: (f: 'Weekly' | 'Monthly' | 'Yearly') => void;
-  getFilterData: (filter: 'Weekly' | 'Monthly' | 'Yearly', baseData: { Weekly: number[]; Monthly: number[]; Yearly: number[] }) => number[];
-  getFilterLabels: (filter: 'Weekly' | 'Monthly' | 'Yearly') => string[];
+  revenueFilter: 'Monthly' | 'Yearly';
+  setRevenueFilter: (f: 'Monthly' | 'Yearly') => void;
+  getFilterData: (filter: 'Monthly' | 'Yearly', baseData: { Monthly: number[]; Yearly: number[] }) => number[];
+  getFilterLabels: (filter: 'Monthly' | 'Yearly') => string[];
+  products?: any[];
 }
 
 export default function OverviewTab({
@@ -35,8 +33,93 @@ export default function OverviewTab({
   revenueFilter,
   setRevenueFilter,
   getFilterData,
-  getFilterLabels
+  getFilterLabels,
+  products
 }: OverviewTabProps) {
+  const dynamicRevenueData = useMemo(() => {
+    const monthlySales = Array(12).fill(0);
+    const yearlySales = Array(20).fill(0);
+    const weeklySales = Array(12).fill(0);
+
+    const weeklyIntervals = [
+      { start: new Date('2026-03-15'), end: new Date('2026-03-22') },
+      { start: new Date('2026-03-22'), end: new Date('2026-03-29') },
+      { start: new Date('2026-03-29'), end: new Date('2026-04-05') },
+      { start: new Date('2026-04-05'), end: new Date('2026-04-12') },
+      { start: new Date('2026-04-12'), end: new Date('2026-04-19') },
+      { start: new Date('2026-04-19'), end: new Date('2026-04-26') },
+      { start: new Date('2026-04-26'), end: new Date('2026-05-03') },
+      { start: new Date('2026-05-03'), end: new Date('2026-05-10') },
+      { start: new Date('2026-05-10'), end: new Date('2026-05-17') },
+      { start: new Date('2026-05-17'), end: new Date('2026-05-24') },
+      { start: new Date('2026-05-24'), end: new Date('2026-05-31') },
+      { start: new Date('2026-05-31'), end: new Date('2026-06-07') }
+    ];
+
+    transactions.forEach(t => {
+      if (t.type !== 'penjualan') return;
+      const tDate = new Date(t.date);
+      const amt = Number(t.amount || 0) / 1000000; // in millions
+
+      // Month matching (2026)
+      if (tDate.getFullYear() === 2026) {
+        const m = tDate.getMonth();
+        if (m >= 0 && m < 12) {
+          monthlySales[m] += amt;
+        }
+      }
+
+      // Year matching (2007 - 2026)
+      const yr = tDate.getFullYear();
+      if (yr >= 2007 && yr <= 2026) {
+        yearlySales[yr - 2007] += amt;
+      }
+
+      // Week matching
+      for (let i = 0; i < weeklyIntervals.length; i++) {
+        const interval = weeklyIntervals[i];
+        if (tDate >= interval.start && tDate < interval.end) {
+          weeklySales[i] += amt;
+          break;
+        }
+      }
+    });
+
+    const roundValues = (arr: number[]) => arr.map(v => Math.round(v * 10) / 10);
+
+    return {
+      Weekly: roundValues(weeklySales),
+      Monthly: roundValues(monthlySales),
+      Yearly: roundValues(yearlySales)
+    };
+  }, [transactions]);
+
+  const equityMonthlyData = useMemo(() => {
+    const monthlyData: number[] = [];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
+    const targetYear = 2026;
+
+    months.forEach((_, idx) => {
+      const upToDate = new Date(targetYear, idx, 31, 23, 59, 59);
+      let val = 0;
+      transactions.forEach(t => {
+        if (new Date(t.date) > upToDate) return;
+        
+        if (t.type === 'permodalan') {
+          val += t.amount;
+        } else if (t.type === 'penjualan') {
+          val += t.amount;
+        } else if (t.type === 'prive') {
+          val -= t.amount;
+        } else if (t.type === 'pengeluaran') {
+          val -= t.amount;
+        }
+      });
+      monthlyData.push(Math.max(0, Math.round((val / 1000000) * 10) / 10));
+    });
+    return monthlyData;
+  }, [transactions]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -79,7 +162,7 @@ export default function OverviewTab({
           <div className="flex justify-between items-center">
             <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-500">📈 Sales Revenue</h3>
             <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
-              {(['Weekly', 'Monthly', 'Yearly'] as const).map((f) => (
+              {(['Monthly', 'Yearly'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setRevenueFilter(f)}
@@ -94,11 +177,7 @@ export default function OverviewTab({
           </div>
           <div className="pt-2">
             <SVGLineChart
-              data={getFilterData(revenueFilter, {
-                Weekly: [15, 18, 14, 22, 25, 19, 28, 30, 27, 35, 32, 40],
-                Monthly: [35, 42, 38, 45, 40, 55, 48, 65, 60, 70, 68, 85],
-                Yearly: [8, 12, 15, 18, 22, 25, 30, 28, 35, 40, 48, 55, 62, 70, 78, 85, 95, 110, 125, 140]
-              })}
+              data={dynamicRevenueData[revenueFilter]}
               labels={getFilterLabels(revenueFilter)}
               gradientColors={['#0284c7', '#38bdf8']}
               strokeColor="#0284c7"
@@ -112,7 +191,7 @@ export default function OverviewTab({
         <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-xs flex flex-col justify-between">
           <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-500 mb-2">📦 Pie Chart Stock Available</h3>
           <div className="flex-1 flex items-center justify-center">
-            <StockPieChart />
+            <StockPieChart products={products} />
           </div>
         </div>
       </div>
@@ -137,29 +216,22 @@ export default function OverviewTab({
             </div>
           </div>
 
-          {/* Capital Expenditures */}
+          {/* Perkembangan Nilai Modal */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-xs space-y-4">
             <div>
-              <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-500">🏢 Capital Expenditure (CapEx - Lifetime)</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5">Akumulasi pengeluaran modal aset tetap (Mesin, Pabrik, Kendaraan Armada).</p>
+              <h3 className="text-xs uppercase font-extrabold tracking-wider text-slate-500">📈 Perkembangan Nilai Modal (Ekuitas)</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">Tren pertumbuhan nilai modal bersih bulanan terakumulasi secara berkala (2026).</p>
             </div>
             
-            <div className="h-44 flex items-end justify-between pt-8 border-b border-slate-100 relative">
-              {[
-                { label: 'Q1 2025', val: 75, detail: 'Mesin Tekuk Plat' },
-                { label: 'Q2 2025', val: 120, detail: 'Oven Powder Coating' },
-                { label: 'Q3 2025', val: 95, detail: 'Alat Las Spot Welder' },
-                { label: 'Q4 2025', val: 150, detail: 'Armada PickUp Kargo' },
-                { label: 'Q1 2026', val: 185, detail: 'Renovasi Pabrik Depok' },
-              ].map((item, idx) => (
-                <div key={idx} className="flex flex-col items-center w-full group relative z-10">
-                  <div className="text-[8px] font-mono text-indigo-600 font-bold mb-1 opacity-0 group-hover:opacity-100 transition-opacity absolute -top-5">
-                    Rp {item.val}jt ({item.detail})
-                  </div>
-                  <div className="w-8 bg-slate-900 rounded-t transition-all hover:bg-indigo-600" style={{ height: `${item.val * 0.65}px` }} />
-                  <span className="text-[8px] text-slate-400 font-bold mt-2">{item.label}</span>
-                </div>
-              ))}
+            <div className="pt-2">
+              <SVGLineChart
+                data={equityMonthlyData}
+                labels={['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des']}
+                gradientColors={['#6366f1', '#818cf8']}
+                strokeColor="#6366f1"
+                gradientId="overview-modal-grad"
+                valueSuffix="jt"
+              />
             </div>
           </div>
         </div>

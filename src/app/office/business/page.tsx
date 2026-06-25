@@ -27,24 +27,20 @@ export default function BusinessDashboard() {
   const [userEmail, setUserEmail] = useState('');
   const [activeMenu, setActiveMenu] = useState<'overview' | 'ledger' | 'ratios' | 'products' | 'accounting'>('overview');
 
-  // Input states for ledger
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: '1', date: '2026-06-18', desc: 'Penjualan Rak Gondola Single Utama T150 (20 unit)', type: 'penjualan', amount: 17000000, qty: 20 },
-    { id: '2', date: '2026-06-17', desc: 'Pembelian Cat Powder Coating (Bahan Baku)', type: 'pengeluaran', amount: 8900050 },
-    { id: '3', date: '2026-06-15', desc: 'Injeksi Modal Tambahan Owner Iqbal', type: 'permodalan', amount: 150000000 },
-    { id: '4', date: '2026-06-10', desc: 'Penjualan Rak Double Sambung T150 (5 unit)', type: 'penjualan', amount: 6000000, qty: 5 },
-    { id: '5', date: '2026-06-05', desc: 'Bensin & Operasional Armada Logistik', type: 'pengeluaran', amount: 1200000 },
-    { id: '6', date: '2026-06-03', desc: 'Penarikan Prive Owner Iqbal (Pribadi)', type: 'prive', amount: 5000000 },
-    { id: '7', date: '2026-06-02', desc: 'Pembelian Mesin Tekuk Plat Baja Baru', type: 'capex', amount: 45000000 },
-  ]);
-
-  const [txDesc, setTxDesc] = useState('');
-  const [txType, setTxType] = useState<'penjualan' | 'pengeluaran' | 'permodalan' | 'prive' | 'capex'>('penjualan');
-  const [txAmount, setTxAmount] = useState('');
-  const [txQty, setTxQty] = useState('');
+  // Unified dynamic transactions read from Supabase tables
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [products, setProducts] = useState<any[]>([]);
+  const [shippingOpex, setShippingOpex] = useState<any[]>([]);
+  const [rawSales, setRawSales] = useState<any[]>([]);
+  const [rawRestocks, setRawRestocks] = useState<any[]>([]);
+  const [rawOpex, setRawOpex] = useState<any[]>([]);
+  const [rawPermodalan, setRawPermodalan] = useState<any[]>([]);
+  const [rawPrives, setRawPrives] = useState<any[]>([]);
+  const [rawRepairs, setRawRepairs] = useState<any[]>([]);
 
   // Graph and Analytics Filters
-  const [revenueFilter, setRevenueFilter] = useState<'Weekly' | 'Monthly' | 'Yearly'>('Monthly');
+  const [revenueFilter, setRevenueFilter] = useState<'Monthly' | 'Yearly'>('Monthly');
 
   // Products and Markets Tab Filters
   const [prodSalesFilter, setProdSalesFilter] = useState<'Monthly' | 'Yearly'>('Monthly');
@@ -52,11 +48,175 @@ export default function BusinessDashboard() {
   const [shipSelfFilter, setShipSelfFilter] = useState<'Monthly' | 'Yearly'>('Monthly');
   const [shipExpFilter, setShipExpFilter] = useState<'Monthly' | 'Yearly'>('Monthly');
 
-  // Ledger (Transaksi & Keuangan) States
-  const [filterTxJenis, setFilterTxJenis] = useState<'Semua' | 'pemasukan' | 'pengeluaran'>('Semua');
-  const [filterTxSubJenis, setFilterTxSubJenis] = useState<string>('Semua');
-  const [isPemasukanModalOpen, setIsPemasukanModalOpen] = useState(false);
-  const [isPengeluaranModalOpen, setIsPengeluaranModalOpen] = useState(false);
+  // Function to load all transactions from Supabase and merge them
+  const loadTransactionsFromSupabase = async () => {
+    setLoadingData(true);
+    try {
+      const mergedList: Transaction[] = [];
+
+      // 1. Fetch Penjualan
+      const { data: sales, error: sErr } = await supabase
+        .from('transaksi_penjualan')
+        .select(`
+          id_transaksi,
+          waktu_transaksi,
+          nama_pelanggan,
+          daerah_tujuan,
+          jenis_pengiriman,
+          nama_ekspedisi,
+          detail_penjualan_produk (
+            qty_terjual,
+            total_revenue_produk,
+            id_produk
+          )
+        `);
+      if (sErr) throw sErr;
+      if (sales) {
+        sales.forEach((s: any) => {
+          const totalAmt = s.detail_penjualan_produk?.reduce((acc: number, item: any) => acc + Number(item.total_revenue_produk || 0), 0) || 0;
+          const totalQty = s.detail_penjualan_produk?.reduce((acc: number, item: any) => acc + Number(item.qty_terjual || 0), 0) || 0;
+          mergedList.push({
+            id: s.id_transaksi,
+            date: new Date(s.waktu_transaksi).toISOString().split('T')[0],
+            desc: `Penjualan Ke Pelanggan: ${s.nama_pelanggan} (${s.daerah_tujuan})`,
+            type: 'penjualan',
+            amount: totalAmt,
+            qty: totalQty
+          });
+        });
+      }
+
+      // 2. Fetch Permodalan
+      const { data: capital, error: capErr } = await supabase
+        .from('transaksi_permodalan')
+        .select('id_modal, waktu_input, jenis_permodalan, nominal_tunai, nama_aset, nilai_buku_aset, tarif_depresiasi');
+      if (capErr) throw capErr;
+      if (capital) {
+        capital.forEach((c: any) => {
+          const isTunai = c.jenis_permodalan === '#Injeksi Modal';
+          mergedList.push({
+            id: c.id_modal,
+            date: c.waktu_input,
+            desc: isTunai ? `Injeksi Modal Baru` : `Penempatan Aset Modal: ${c.nama_aset}`,
+            type: 'permodalan',
+            amount: isTunai ? Number(c.nominal_tunai || 0) : Number(c.nilai_buku_aset || 0)
+          });
+        });
+      }
+
+      // 3. Fetch Restock (Kulakan)
+      const { data: restocks, error: rErr } = await supabase
+        .from('transaksi_kulakan')
+        .select(`
+          id_kulakan,
+          waktu_kulakan,
+          detail_kulakan_produk (
+            id_produk,
+            qty_kulakan,
+            harga_kulak_satuan,
+            total_biaya_kulakan
+          )
+        `);
+      if (rErr) throw rErr;
+      if (restocks) {
+        setRawRestocks(restocks || []);
+        restocks.forEach((r: any) => {
+          const totalAmt = r.detail_kulakan_produk?.reduce((acc: number, item: any) => acc + Number(item.total_biaya_kulakan || 0), 0) || 0;
+          const totalQty = r.detail_kulakan_produk?.reduce((acc: number, item: any) => acc + Number(item.qty_kulakan || 0), 0) || 0;
+          mergedList.push({
+            id: r.id_kulakan,
+            date: r.waktu_kulakan,
+            desc: `Restock Kulakan Gudang (Total ${totalQty} unit)`,
+            type: 'pengeluaran',
+            amount: totalAmt,
+            qty: totalQty
+          });
+        });
+      }
+
+      // 4. Fetch OPEX
+      const { data: opex, error: opexErr } = await supabase
+        .from('transaksi_opex')
+        .select('id_opex, waktu_opex, kebutuhan_opex, nominal_opex, kategori_operasional');
+      if (opexErr) throw opexErr;
+      if (opex) {
+        setRawOpex(opex || []);
+        opex.forEach((o: any) => {
+          mergedList.push({
+            id: o.id_opex,
+            date: o.waktu_opex,
+            desc: `Beban OPEX: ${o.kebutuhan_opex}`,
+            type: 'pengeluaran',
+            amount: Number(o.nominal_opex || 0)
+          });
+        });
+      }
+
+      // 5. Fetch Perawatan Aset
+      const { data: repairs, error: repErr } = await supabase
+        .from('transaksi_perawatan_aset')
+        .select('id_perawatan, waktu_perawatan, jenis_perawatan, nama_pengeluaran, nominal_biaya');
+      if (repErr) throw repErr;
+      if (repairs) {
+        repairs.forEach((r: any) => {
+          const isCapex = r.jenis_perawatan === '#Peremajaan';
+          mergedList.push({
+            id: r.id_perawatan,
+            date: r.waktu_perawatan,
+            desc: `${isCapex ? 'Peremajaan' : 'Perbaikan'} Aset: ${r.nama_pengeluaran}`,
+            type: isCapex ? 'capex' : 'pengeluaran',
+            amount: Number(r.nominal_biaya || 0)
+          });
+        });
+      }
+
+      // 6. Fetch Prive
+      const { data: prives, error: priveErr } = await supabase
+        .from('transaksi_prive')
+        .select('id_prive, waktu_prive, nama_owner, keterangan_prive, nominal_prive');
+      if (priveErr) throw priveErr;
+      if (prives) {
+        prives.forEach((p: any) => {
+          mergedList.push({
+            id: p.id_prive,
+            date: p.waktu_prive,
+            desc: `Prive Penarikan Owner: ${p.nama_owner} (${p.keterangan_prive || 'Penarikan Pribadi'})`,
+            type: 'prive',
+            amount: Number(p.nominal_prive || 0)
+          });
+        });
+      }
+
+      // Fetch Products
+      const { data: prodData, error: prodErr } = await supabase
+        .from('products')
+        .select('id, name, stock, min_price, max_price');
+      if (prodErr) throw prodErr;
+      setProducts(prodData || []);
+
+      // Fetch Shipping OPEX
+      const { data: opData, error: opErr } = await supabase
+        .from('transaksi_opex')
+        .select('id_opex, waktu_opex, kebutuhan_opex, nominal_opex, nama_pelanggan_terkait')
+        .eq('kategori_operasional', '#Pengiriman');
+      if (opErr) throw opErr;
+      setShippingOpex(opData || []);
+
+      // Save Raw Sales
+      setRawSales(sales || []);
+      setRawPermodalan(capital || []);
+      setRawPrives(prives || []);
+      setRawRepairs(repairs || []);
+
+      // Sort by date descending
+      mergedList.sort((a, b) => b.date.localeCompare(a.date));
+      setTransactions(mergedList);
+    } catch (e) {
+      console.error('Failed to load transactions:', e);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   // Authentication check
   useEffect(() => {
@@ -75,6 +235,9 @@ export default function BusinessDashboard() {
 
       setUserEmail(email);
       setCheckingAuth(false);
+      
+      // Load initial transactions once authenticated
+      loadTransactionsFromSupabase();
     };
     checkAuth();
   }, [router]);
@@ -86,31 +249,6 @@ export default function BusinessDashboard() {
       await supabase.auth.signOut();
       router.push('/office');
     }
-  };
-
-  const handleAddTransaction = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amountNum = parseFloat(txAmount.replace(/[^0-9.-]+/g, ''));
-    if (!txDesc.trim() || isNaN(amountNum)) {
-      alert('Masukkan deskripsi dan nominal transaksi dengan benar.');
-      return;
-    }
-
-    const newTx: Transaction = {
-      id: Date.now().toString(),
-      date: new Date().toISOString().split('T')[0],
-      desc: txDesc,
-      type: txType,
-      amount: amountNum,
-      qty: txType === 'penjualan' ? parseInt(txQty) || 1 : undefined
-    };
-
-    setTransactions([newTx, ...transactions]);
-    setTxDesc('');
-    setTxAmount('');
-    setTxQty('');
-    setIsPemasukanModalOpen(false);
-    setIsPengeluaranModalOpen(false);
   };
 
   // 1. Cash on Hand
@@ -126,8 +264,81 @@ export default function BusinessDashboard() {
     return cash;
   }, [transactions]);
 
-  // 2. Stock Value (Mocked dynamic value representing steel stocks + finished racks ready)
-  const stockValue = 185200000;
+  // 1.5. Calculate product HPP dynamically
+  const productHppMap = useMemo(() => {
+    const map: Record<string, number> = {};
+
+    // First group Bongkar opex by date
+    const bongkarByDate: Record<string, number> = {};
+    rawOpex
+      .filter(o => o.kategori_operasional === '#Bongkar')
+      .forEach(o => {
+        const dateStr = o.waktu_opex;
+        bongkarByDate[dateStr] = (bongkarByDate[dateStr] || 0) + Number(o.nominal_opex || 0);
+      });
+
+    // Group restock quantities by date
+    const restockQtyByDate: Record<string, number> = {};
+    rawRestocks.forEach(r => {
+      const dateStr = r.waktu_kulakan;
+      const totalQty = r.detail_kulakan_produk?.reduce((acc: number, d: any) => acc + Number(d.qty_kulakan || 0), 0) || 0;
+      restockQtyByDate[dateStr] = (restockQtyByDate[dateStr] || 0) + totalQty;
+    });
+
+    // Calculate unloading cost per unit per date
+    const unloadingCostPerUnitByDate: Record<string, number> = {};
+    Object.keys(restockQtyByDate).forEach(dateStr => {
+      const qty = restockQtyByDate[dateStr];
+      const bongkarCost = bongkarByDate[dateStr] || 0;
+      unloadingCostPerUnitByDate[dateStr] = qty > 0 ? (bongkarCost / qty) : 0;
+    });
+
+    // Group product restock details to compute weighted average HPP
+    const prodDetails: Record<string, { totalVal: number; totalQty: number }> = {};
+    rawRestocks.forEach(r => {
+      const dateStr = r.waktu_kulakan;
+      const unloadingCost = unloadingCostPerUnitByDate[dateStr] || 0;
+      r.detail_kulakan_produk?.forEach((d: any) => {
+        const prodId = d.id_produk;
+        const qty = Number(d.qty_kulakan || 0);
+        const unitCost = Number(d.harga_kulak_satuan || 0) + unloadingCost;
+        if (!prodDetails[prodId]) {
+          prodDetails[prodId] = { totalVal: 0, totalQty: 0 };
+        }
+        prodDetails[prodId].totalVal += qty * unitCost;
+        prodDetails[prodId].totalQty += qty;
+      });
+    });
+
+    // Calculate HPP for each product in catalog, fallback to min_price * 0.7 if no restocks
+    products.forEach(p => {
+      const details = prodDetails[p.id];
+      if (details && details.totalQty > 0) {
+        map[p.id] = details.totalVal / details.totalQty;
+      } else {
+        map[p.id] = Number(p.min_price || 0) * 0.7;
+      }
+    });
+
+    return map;
+  }, [products, rawRestocks, rawOpex]);
+
+  const productsWithHpp = useMemo(() => {
+    return products.map(p => {
+      const hpp = productHppMap[p.id] || Number(p.min_price || 0) * 0.7;
+      return {
+        ...p,
+        hpp,
+        stockValue: (p.stock || 0) * hpp
+      };
+    });
+  }, [products, productHppMap]);
+
+  // 2. Stock Value (Steel stocks + finished racks ready)
+  const stockValue = useMemo(() => {
+    if (products.length === 0) return 185200000; // fallback to mock
+    return productsWithHpp.reduce((acc, p) => acc + (Number(p.stock || 0) * (p.hpp || 0)), 0);
+  }, [products, productsWithHpp]);
 
   // 3. Monthly Revenue
   const monthlyRevenue = useMemo(() => {
@@ -164,13 +375,13 @@ export default function BusinessDashboard() {
 
   const cogsTotal = useMemo(() => {
     return transactions
-      .filter(t => t.type === 'pengeluaran' && !t.desc.toLowerCase().includes('operasional') && !t.desc.toLowerCase().includes('bensin'))
+      .filter(t => t.type === 'pengeluaran' && !t.desc.toLowerCase().includes('operasional') && !t.desc.toLowerCase().includes('bensin') && !t.desc.toLowerCase().includes('opex'))
       .reduce((acc, curr) => acc + curr.amount, 0);
   }, [transactions]);
 
   const opexTotal = useMemo(() => {
     return transactions
-      .filter(t => t.type === 'pengeluaran' && (t.desc.toLowerCase().includes('operasional') || t.desc.toLowerCase().includes('bensin')))
+      .filter(t => t.type === 'pengeluaran' && (t.desc.toLowerCase().includes('operasional') || t.desc.toLowerCase().includes('bensin') || t.desc.toLowerCase().includes('opex')))
       .reduce((acc, curr) => acc + curr.amount, 0);
   }, [transactions]);
 
@@ -178,11 +389,11 @@ export default function BusinessDashboard() {
     return totalPenjualan - totalPengeluaran;
   }, [totalPenjualan, totalPengeluaran]);
 
-  if (checkingAuth) {
+  if (checkingAuth || loadingData) {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-500 font-sans space-y-3">
         <div className="animate-spin text-2xl">⏳</div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Memverifikasi Hak Akses Owner...</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Memverifikasi Hak Akses & Sinkronisasi DB...</p>
       </div>
     );
   }
@@ -270,18 +481,12 @@ export default function BusinessDashboard() {
             totalModal={transactions.filter(t => t.type === 'permodalan').reduce((acc, curr) => acc + curr.amount, 0)}
             getFilterData={(filter, baseData) => baseData[filter] || baseData.Monthly}
             getFilterLabels={(filter) => {
-              if (filter === 'Weekly') {
-                return [
-                  '15-22 Mar', '22-29 Mar', '29 Mar-5 Apr', '5-12 Apr',
-                  '12-19 Apr', '19-26 Apr', '26 Apr-3 Mei', '3-10 Mei',
-                  '10-17 Mei', '17-24 Mei', '24-31 Mei', '31 Mei-7 Jun'
-                ];
-              }
               if (filter === 'Yearly') {
                 return Array.from({ length: 20 }, (_, i) => (2007 + i).toString());
               }
               return ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
             }}
+            products={productsWithHpp}
           />
         )}
 
@@ -289,23 +494,6 @@ export default function BusinessDashboard() {
         {activeMenu === 'ledger' && (
           <LedgerTab
             cashOnHand={cashOnHand}
-            txType={txType}
-            setTxType={setTxType}
-            isPemasukanModalOpen={isPemasukanModalOpen}
-            setIsPemasukanModalOpen={setIsPemasukanModalOpen}
-            isPengeluaranModalOpen={isPengeluaranModalOpen}
-            setIsPengeluaranModalOpen={setIsPengeluaranModalOpen}
-            txDesc={txDesc}
-            setTxDesc={setTxDesc}
-            txAmount={txAmount}
-            setTxAmount={setTxAmount}
-            txQty={txQty}
-            setTxQty={setTxQty}
-            handleAddTransaction={handleAddTransaction}
-            filterTxJenis={filterTxJenis}
-            setFilterTxJenis={setFilterTxJenis}
-            filterTxSubJenis={filterTxSubJenis}
-            setFilterTxSubJenis={setFilterTxSubJenis}
             transactions={transactions}
             onLihatLaporan={() => router.push('/office/business/report')}
           />
@@ -325,6 +513,9 @@ export default function BusinessDashboard() {
             setProdSalesFilter={setProdSalesFilter}
             regionSalesFilter={regionSalesFilter}
             setRegionSalesFilter={setRegionSalesFilter}
+            products={productsWithHpp}
+            rawSales={rawSales}
+            shippingOpex={shippingOpex}
           />
         )}
 
@@ -337,6 +528,13 @@ export default function BusinessDashboard() {
             monthlyProfitMargin={monthlyProfitMargin}
             netProfit={netProfit}
             stockValue={stockValue}
+            rawPermodalan={rawPermodalan}
+            rawPrives={rawPrives}
+            rawRepairs={rawRepairs}
+            rawOpex={rawOpex}
+            cashOnHand={cashOnHand}
+            rawSales={rawSales}
+            rawRestocks={rawRestocks}
           />
         )}
 
@@ -348,6 +546,13 @@ export default function BusinessDashboard() {
             opexTotal={opexTotal}
             cashOnHand={cashOnHand}
             stockValue={stockValue}
+            rawPermodalan={rawPermodalan}
+            rawPrives={rawPrives}
+            rawRepairs={rawRepairs}
+            rawOpex={rawOpex}
+            rawSales={rawSales}
+            rawRestocks={rawRestocks}
+            transactions={transactions}
           />
         )}
 

@@ -1,54 +1,26 @@
 'use strict';
 'use client';
 
-import React from 'react';
-import { Transaction } from './Charts';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface LedgerTabProps {
   cashOnHand: number;
-  transactions: Transaction[];
-  txDesc: string;
-  setTxDesc: (v: string) => void;
-  txType: 'penjualan' | 'pengeluaran' | 'permodalan' | 'prive' | 'capex';
-  setTxType: (v: 'penjualan' | 'pengeluaran' | 'permodalan' | 'prive' | 'capex') => void;
-  txAmount: string;
-  setTxAmount: (v: string) => void;
-  txQty: string;
-  setTxQty: (v: string) => void;
-  filterTxJenis: 'Semua' | 'pemasukan' | 'pengeluaran';
-  setFilterTxJenis: (v: 'Semua' | 'pemasukan' | 'pengeluaran') => void;
-  filterTxSubJenis: string;
-  setFilterTxSubJenis: (v: string) => void;
-  isPemasukanModalOpen: boolean;
-  setIsPemasukanModalOpen: (v: boolean) => void;
-  isPengeluaranModalOpen: boolean;
-  setIsPengeluaranModalOpen: (v: boolean) => void;
-  handleAddTransaction: (e: React.FormEvent) => void;
+  transactions: any[];
   onLihatLaporan: () => void;
 }
 
 export default function LedgerTab({
   cashOnHand,
   transactions,
-  txDesc,
-  setTxDesc,
-  txType,
-  setTxType,
-  txAmount,
-  setTxAmount,
-  txQty,
-  setTxQty,
-  filterTxJenis,
-  setFilterTxJenis,
-  filterTxSubJenis,
-  setFilterTxSubJenis,
-  isPemasukanModalOpen,
-  setIsPemasukanModalOpen,
-  isPengeluaranModalOpen,
-  setIsPengeluaranModalOpen,
-  handleAddTransaction,
   onLihatLaporan
 }: LedgerTabProps) {
+  const router = useRouter();
+
+  // Dynamic filter states
+  const [filterTxJenis, setFilterTxJenis] = useState<'Semua' | 'pemasukan' | 'pengeluaran'>('Semua');
+  const [filterTxSubJenis, setFilterTxSubJenis] = useState<string>('Semua');
+
   return (
     <div className="space-y-10">
       <div>
@@ -70,10 +42,7 @@ export default function LedgerTab({
 
           <div className="flex gap-4 items-stretch flex-wrap lg:flex-nowrap">
             <button 
-              onClick={() => {
-                setTxType('penjualan');
-                setIsPemasukanModalOpen(true);
-              }}
+              onClick={() => router.push('/office/business/pemasukan')}
               className="flex-1 lg:w-32 bg-gradient-to-br from-white to-slate-50/50 hover:bg-slate-100 border border-slate-200/70 p-4.5 rounded-2xl shadow-xs hover:scale-[1.02] hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center text-center gap-2 cursor-pointer group"
             >
               <span className="text-xl group-hover:scale-110 transition-transform">📥</span>
@@ -81,10 +50,7 @@ export default function LedgerTab({
             </button>
 
             <button 
-              onClick={() => {
-                setTxType('pengeluaran');
-                setIsPengeluaranModalOpen(true);
-              }}
+              onClick={() => router.push('/office/business/pengeluaran')}
               className="flex-1 lg:w-32 bg-gradient-to-br from-white to-slate-50/50 hover:bg-slate-100 border border-slate-200/70 p-4.5 rounded-2xl shadow-xs hover:scale-[1.02] hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center text-center gap-2 cursor-pointer group"
             >
               <span className="text-xl group-hover:scale-110 transition-transform">📤</span>
@@ -103,134 +69,7 @@ export default function LedgerTab({
           </div>
         </div>
 
-        {isPemasukanModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 max-w-md w-full space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">📥 Input Pemasukan Baru</h3>
-                <button 
-                  onClick={() => setIsPemasukanModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-600 text-lg cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-              <form onSubmit={handleAddTransaction} className="space-y-4">
-                <div>
-                  <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Tipe Pemasukan</label>
-                  <select
-                    value={txType}
-                    onChange={(e) => setTxType(e.target.value as any)}
-                    className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none cursor-pointer"
-                  >
-                    <option value="penjualan">Pemasukan (Penjualan)</option>
-                    <option value="permodalan">Pemasukan (Permodalan)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Deskripsi / Keterangan</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: Penjualan 20 Unit Rak..."
-                    value={txDesc}
-                    onChange={(e) => setTxDesc(e.target.value)}
-                    className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0284c7]/60 shadow-inner"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Jumlah (Rp)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: 17000000"
-                    value={txAmount}
-                    onChange={(e) => setTxAmount(e.target.value)}
-                    className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0284c7]/60 shadow-inner"
-                  />
-                </div>
-                {txType === 'penjualan' && (
-                  <div>
-                    <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Jumlah Unit Terjual (Qty)</label>
-                    <input
-                      type="number"
-                      required
-                      placeholder="Qty..."
-                      value={txQty}
-                      onChange={(e) => setTxQty(e.target.value)}
-                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0284c7]/60 shadow-inner"
-                    />
-                  </div>
-                )}
-                <button
-                  type="submit"
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm mt-2"
-                >
-                  💾 Simpan Pemasukan
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {isPengeluaranModalOpen && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl p-6 max-w-md w-full space-y-4">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">📤 Input Pengeluaran Baru</h3>
-                <button 
-                  onClick={() => setIsPengeluaranModalOpen(false)}
-                  className="text-slate-400 hover:text-slate-600 text-lg cursor-pointer"
-                >
-                  ✕
-                </button>
-              </div>
-              <form onSubmit={handleAddTransaction} className="space-y-4">
-                <div>
-                  <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Tipe Pengeluaran</label>
-                  <select
-                    value={txType}
-                    onChange={(e) => setTxType(e.target.value as any)}
-                    className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none cursor-pointer"
-                  >
-                    <option value="pengeluaran">Beban Operasional / COGS (Pengeluaran)</option>
-                    <option value="capex">Pembelian Aset / Mesin (Capex)</option>
-                    <option value="prive">Penarikan Owner (Prive)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Deskripsi / Keterangan</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: Operasional Solar Armada..."
-                    value={txDesc}
-                    onChange={(e) => setTxDesc(e.target.value)}
-                    className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0284c7]/60 shadow-inner"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Jumlah (Rp)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Contoh: 1200000"
-                    value={txAmount}
-                    onChange={(e) => setTxAmount(e.target.value)}
-                    className="w-full bg-white border border-slate-200 text-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0284c7]/60 shadow-inner"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm mt-2"
-                >
-                  💾 Simpan Pengeluaran
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
+        {/* TRANSACTION HISTORY datagrid WITH DYNAMIC FILTERS */}
         <div className="bg-gradient-to-br from-white to-slate-50/50 p-6 rounded-2xl border border-slate-200/60 shadow-sm shadow-slate-100/40 hover:shadow-md hover:shadow-slate-250/30 transition-all duration-300 space-y-4">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h3 className="text-sm uppercase font-extrabold tracking-wider text-slate-700">📖 Riwayat Transaksi Jurnal</h3>
@@ -265,7 +104,7 @@ export default function LedgerTab({
                   <>
                     <option value="opex">Operational Expense (Beban Usaha)</option>
                     <option value="cogs">Cat/Plat Bahan Baku (COGS)</option>
-                    <option value="capex">Pembelian Mesin (Capital Expense)</option>
+                    <option value="capex">Pembelian Aset (Capital Expense)</option>
                     <option value="prive">Penarikan Owner (Prive)</option>
                   </>
                 )}
@@ -300,11 +139,11 @@ export default function LedgerTab({
                       if (filterTxSubJenis === 'capex' && tx.type !== 'capex') return false;
                       
                       if (filterTxSubJenis === 'opex') {
-                        const isOpex = tx.type === 'pengeluaran' && (tx.desc.toLowerCase().includes('operasional') || tx.desc.toLowerCase().includes('bensin'));
+                        const isOpex = tx.type === 'pengeluaran' && (tx.desc.toLowerCase().includes('operasional') || tx.desc.toLowerCase().includes('bensin') || tx.desc.toLowerCase().includes('opex'));
                         if (!isOpex) return false;
                       }
                       if (filterTxSubJenis === 'cogs') {
-                        const isCOGS = tx.type === 'pengeluaran' && (tx.desc.toLowerCase().includes('cat') || tx.desc.toLowerCase().includes('bahan'));
+                        const isCOGS = tx.type === 'pengeluaran' && (tx.desc.toLowerCase().includes('cat') || tx.desc.toLowerCase().includes('bahan') || tx.desc.toLowerCase().includes('kulakan') || tx.desc.toLowerCase().includes('restock'));
                         if (!isCOGS) return false;
                       }
                     }

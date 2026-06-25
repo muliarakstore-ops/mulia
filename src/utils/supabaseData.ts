@@ -193,7 +193,7 @@ export const saveCmsConfig = async (config: FullCmsConfig): Promise<boolean> => 
 // 2. PRODUCTS
 // ==========================================
 
-export const getSupabaseProducts = async (): Promise<Product[]> => {
+export const getSupabaseProducts = async (groupVariants: boolean = false): Promise<Product[]> => {
   if (!isSupabaseConfigured()) return [];
   try {
     const { data, error } = await supabase
@@ -202,7 +202,8 @@ export const getSupabaseProducts = async (): Promise<Product[]> => {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data || []).map((p: any) => ({
+    
+    const allProducts = (data || []).map((p: any) => ({
       id: p.id,
       name: p.name,
       category: p.category,
@@ -219,6 +220,263 @@ export const getSupabaseProducts = async (): Promise<Product[]> => {
       width: p.width,
       stock: p.stock
     }));
+
+    if (!groupVariants) {
+      return allProducts;
+    }
+
+    // Grouping variants and generating public-facing configurations
+    const groupedList: Product[] = [];
+    
+    // Find base products
+    const g120 = allProducts.find(p => p.name === 'Rak Gondola 120');
+    const g150 = allProducts.find(p => p.name === 'Rak Gondola 150');
+    const g170 = allProducts.find(p => p.name === 'Rak Gondola 170');
+    const mukaEnd = allProducts.find(p => p.name === 'Rak Gondola Muka End');
+    const mejaKasir = allProducts.find(p => p.name === 'Meja Kasir');
+    const gudang = allProducts.find(p => p.name === 'Rak Gudang Besi Heavy Duty');
+    const snack = allProducts.find(p => p.name === 'Rak Display Snack & Chiki');
+    const backwall = allProducts.find(p => p.name === 'Backwall');
+    const ram120 = allProducts.find(p => p.name === 'RAM 120');
+    const ram150 = allProducts.find(p => p.name === 'RAM 150');
+    const ram170 = allProducts.find(p => p.name === 'RAM 170');
+    const tiang = allProducts.find(p => p.name === 'Tiang Penyangga');
+    const priceTag = allProducts.find(p => p.name === 'Price Tag');
+    const papanFlat = allProducts.find(p => p.name === 'Papan Flat');
+
+    const gondolaStock = (g120?.stock || 0) + (g150?.stock || 0) + (g170?.stock || 0);
+    const mejaKasirStock = mejaKasir?.stock || 0;
+    const ramStock = (ram120?.stock || 0) + (ram150?.stock || 0) + (ram170?.stock || 0);
+
+    // 1. Rak Gondola Single (Satu Sisi)
+    groupedList.push({
+      id: g120?.id || 'gondola-single',
+      name: 'Rak Gondola Single (Satu Sisi)',
+      category: 'sofa',
+      price: 'Rp 825.000 - Rp 950.000',
+      minPrice: 825000,
+      maxPrice: 950000,
+      image: '/img/katalog/rak-single.jpeg',
+      description: 'Rak minimarket satu sisi berkualitas tinggi untuk dipasang merapat ke dinding. Terbuat dari bahan besi baja kokoh dengan finishing powder coating anti karat.',
+      specs: [
+        'Pilihan Tinggi Tiang: 120 cm / 150 cm / 170 cm',
+        'Panjang Shelving: 90 cm per unit',
+        'Lebar Shelving Dasar: 35 cm (shelving atas 30 cm)',
+        'Kapasitas Beban: s/d 50 kg per tingkat ambalan',
+        'Ketebalan Plat Shelving: 0.7 mm baja canai dingin',
+        'Finishing: Powder Coating EPOXY tahan gores & pudar'
+      ],
+      height: 180,
+      length: 90,
+      width: 35,
+      stock: gondolaStock
+    });
+
+    // 2. Rak Gondola Double (Dua Sisi)
+    groupedList.push({
+      id: g120?.id || 'gondola-double',
+      name: 'Rak Gondola Double (Dua Sisi)',
+      category: 'table',
+      price: 'Rp 1.000.000 - Rp 1.350.000',
+      minPrice: 1000000,
+      maxPrice: 1350000,
+      image: '/img/katalog/rak-double.jpeg',
+      description: 'Rak lorong tengah minimarket dengan dua sisi shelving berhadapan. Struktur penahan kokoh untuk memaksimalkan kapasitas penyimpanan display produk ritel.',
+      specs: [
+        'Pilihan Tinggi Tiang: 120 cm / 150 cm / 170 cm (dua sisi bolak-balik)',
+        'Panjang Shelving: 90 cm',
+        'Lebar Shelving Dasar: 35 cm (shelving atas 30 cm)',
+        'Kapasitas Beban: s/d 50 kg per tingkat ambalan',
+        'Ketebalan Plat Tiang: 1.8 mm plat baja profil U',
+        'Sistem Pemasangan: Knockdown modular (bisa disambung)'
+      ],
+      height: 150,
+      length: 90,
+      width: 65,
+      stock: gondolaStock
+    });
+
+    // 3. Rak Gondola Muka End
+    if (mukaEnd) {
+      groupedList.push({
+        ...mukaEnd,
+        name: 'Rak Gondola Muka End',
+        price: 'Rp 775.000 - Rp 900.000',
+        image: '/img/katalog/rak-muka-end.jpeg',
+        specs: [
+          'Tinggi Tiang: 150 cm / 180 cm (menyesuaikan rak tengah)',
+          'Panjang Shelving: 90 cm',
+          'Lebar Shelving: Dasar 35 cm (shelving atas 30 cm)',
+          'Kapasitas Beban: s/d 50 kg per tingkat',
+          'Bahan: Besi baja berkualitas premium standar SNI',
+          'Pemasangan: Knockdown (sistem kait tanpa baut)'
+        ]
+      });
+    }
+
+    // 4. Meja Kasir Tipe Lurus
+    groupedList.push({
+      id: mejaKasir?.id || 'meja-kasir-lurus',
+      name: 'Meja Kasir Tipe Lurus',
+      category: 'lighting',
+      price: 'Rp 1.500.000',
+      minPrice: 1500000,
+      maxPrice: 1500000,
+      image: '/img/katalog/meja-kasir.jpeg',
+      description: 'Meja kasir ritel dilapisi plat stainless steel tebal tahan gores dan karat pada permukaannya. Memiliki ruang kaki luas dan struktur kokoh.',
+      specs: [
+        'Dimensi: Panjang 120 cm, Lebar 60 cm, Tinggi 80 cm',
+        'Bahan Permukaan Atas: Plat Stainless Steel anti karat',
+        'Bahan Bodi: Plat Besi tebal 0.8 mm standar pabrik',
+        'Laci Kasir (Cash Drawer): Dilengkapi kunci pengaman manual',
+        'Pelindung Samping: Karet bumper peredam benturan troli'
+      ],
+      height: 80,
+      length: 120,
+      width: 60,
+      stock: mejaKasirStock
+    });
+
+    // 5. Meja Kasir Komputer Tipe L
+    groupedList.push({
+      id: mejaKasir?.id || 'meja-kasir-l',
+      name: 'Meja Kasir Komputer Tipe L',
+      category: 'lighting',
+      price: 'Rp 3.500.000',
+      minPrice: 3500000,
+      maxPrice: 3500000,
+      image: '/img/katalog/meja-kasir-tipe-L.jpeg',
+      description: 'Meja kasir dengan sudut siku L untuk menempatkan monitor komputer, printer kasir, dan laci uang secara rapi dan profesional.',
+      specs: [
+        'Dimensi Utama: P 160 cm x L 120 cm x T 80 cm (Tipe L Siku)',
+        'Bahan Atas: Stainless Steel hairline finishing premium',
+        'Laci Komputer: Laci gantung slide rails untuk keyboard',
+        'Kelistrikan: Dilengkapi lubang jalur kabel (cable grommet)',
+        'Ruang Simpan: Kabinet penyimpanan CPU komputer terproteksi'
+      ],
+      height: 80,
+      length: 160,
+      width: 120,
+      stock: mejaKasirStock
+    });
+
+    // 6. Rak Gudang Besi Heavy Duty
+    if (gudang) {
+      groupedList.push({
+        ...gudang,
+        price: 'Rp 800.000',
+        specs: [
+          'Tinggi Tiang: 200 cm',
+          'Panjang Shelving: 100 cm',
+          'Lebar Shelving: 40 cm',
+          'Kapasitas Beban: s/d 150 kg per tingkat ambalan',
+          'Jumlah Susun: 4 Tingkat ambalan besi tebal',
+          'Sistem Penguncian: Beam berkunci pengait pengaman'
+        ]
+      });
+    }
+
+    // 7. Rak Display Snack & Chiki
+    if (snack) {
+      groupedList.push({
+        ...snack,
+        price: 'Rp 400.000',
+        specs: [
+          'Tinggi Tiang: 140 cm',
+          'Jumlah Basket/Keranjang: 4 tingkat basket kawat gantung',
+          'Bahan: Kawat besi baja tebal lapis coating anti gores',
+          'Mobilitas: Dilengkapi 4 unit roda nilon (2 roda berpengunci)',
+          'Kegunaan: Sangat cocok untuk display snack, ciki, dan mi instan'
+        ]
+      });
+    }
+
+    // 8. Backwall
+    if (backwall) {
+      groupedList.push({
+        ...backwall,
+        name: 'Backwall Ritel (Display Kasir)',
+        price: 'Rp 2.100.000 - Rp 2.500.000',
+        specs: [
+          'Tinggi Tiang: 200 cm',
+          'Lebar Panel: 120 cm',
+          'Bahan: Plat besi & frame aluminium kokoh',
+          'Kompartemen: Dilengkapi sekat akrilik rokok',
+          'Pintu: Sliding kaca dengan kunci pengaman ganda'
+        ]
+      });
+    }
+
+    // 9. RAM Pagar Jaring
+    if (ram120) {
+      groupedList.push({
+        id: ram120.id,
+        name: 'RAM Pagar Jaring (Aksesoris)',
+        category: 'decor',
+        price: 'Rp 160.000 - Rp 220.000',
+        minPrice: 160000,
+        maxPrice: 220000,
+        image: ram120.image,
+        description: 'Pagar jaring RAM besi baja tebal berlapis cat anti karat untuk gantungan aksesoris gantung minimarket.',
+        specs: [
+          'Pilihan Ukuran Tinggi: 120 cm / 150 cm / 170 cm',
+          'Lebar Panel: 90 cm',
+          'Bahan: Kawat baja las tebal dengan frame kokoh',
+          'Finishing: Chrome plating anti karat & pudar',
+          'Kegunaan: Sangat fleksibel untuk memajang barang gantung'
+        ],
+        height: 120,
+        length: 90,
+        width: 5,
+        stock: ramStock
+      });
+    }
+
+    // 10. Tiang Penyangga
+    if (tiang) {
+      groupedList.push({
+        ...tiang,
+        name: 'Tiang Penyangga Rak',
+        price: 'Rp 120.000 - Rp 140.000',
+        specs: [
+          'Tebal Plat: 1.8 mm plat baja profil U',
+          'Finishing: Powder coating EPOXY tahan gores & korosi',
+          'Fitur: Lubang pitch presisi untuk sistem knockdown'
+        ]
+      });
+    }
+
+    // 11. Price Tag
+    if (priceTag) {
+      groupedList.push({
+        ...priceTag,
+        name: 'Mika Price Tag (Isi 200 pcs)',
+        price: 'Rp 1.900.000 - Rp 2.100.000',
+        specs: [
+          'Isi Bundling: 200 Pcs',
+          'Bahan: Mika PVC tebal lentur',
+          'Pemasangan: Sistem jepit langsung ke bibir shelving',
+          'Kegunaan: Pelindung label barcode & harga'
+        ]
+      });
+    }
+
+    // 12. Papan Flat
+    if (papanFlat) {
+      groupedList.push({
+        ...papanFlat,
+        name: 'Papan Flat Akrilik (Isi 5 pcs)',
+        price: 'Rp 390.000 - Rp 420.000',
+        specs: [
+          'Isi Bundling: 5 Pcs',
+          'Bahan: Akrilik Bening tebal 2 mm',
+          'Fungsi: Divider pembatas antar varian produk di ambalan'
+        ]
+      });
+    }
+
+    return groupedList;
+
   } catch (e) {
     console.error('Failed to fetch products from Supabase:', e);
     return [];
