@@ -127,33 +127,91 @@ export default function OverviewTab({
         <p className="text-xs text-slate-500 mt-0.5">Selamat datang Owner Iqbal, berikut ringkasan laporan performa finansial Mulia Rak Store.</p>
       </div>
 
-      {/* KPI Card Metrics */}
+      {/* KPI Card Metrics - Redesigned like v0 Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-xs space-y-3">
-          <span className="text-[9px] uppercase font-extrabold text-slate-400 tracking-wider block">Cash on Hand</span>
-          <span className="text-xl font-black text-slate-900 font-mono">Rp {cashOnHand.toLocaleString('id-ID')}</span>
-          <span className="text-[9px] text-emerald-600 block">🟢 Lancar & Likuid</span>
+        
+        {/* Cash on Hand Card (Glow Accent) */}
+        <div className="bg-gradient-to-br from-[#0284c7] to-[#0369a1] text-white p-5 rounded-2xl border border-blue-600/10 shadow-lg shadow-[#0284c7]/15 flex flex-col justify-between h-36 hover:scale-105 hover:shadow-xl transition-all duration-500 cursor-pointer group">
+          <div className="flex items-start justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-sky-100">Cash on Hand</span>
+            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center group-hover:rotate-45 transition-transform duration-300">
+              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+              </svg>
+            </div>
+          </div>
+          <div>
+            <span className="text-xl md:text-2xl font-black font-mono tracking-tight block">Rp {cashOnHand.toLocaleString('id-ID')}</span>
+            <span className="text-[9px] font-medium text-sky-100/80 block mt-1.5 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span> Lancar & Likuid
+            </span>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-xs space-y-3">
-          <span className="text-[9px] uppercase font-extrabold text-slate-400 tracking-wider block">Stock Value</span>
-          <span className="text-xl font-black text-[#0284c7] font-mono">Rp {stockValue.toLocaleString('id-ID')}</span>
-          <span className="text-[9px] text-slate-400 block">Bahan plat & gondola</span>
+
+        {/* Stock Value Card */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/70 shadow-sm flex flex-col justify-between h-36 hover:scale-105 hover:shadow-md transition-all duration-500 cursor-pointer group">
+          <div className="flex items-start justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Stock Value</span>
+            <div className="w-5 h-5 rounded-full bg-[#0284c7]/10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <svg className="w-3 h-3 text-[#0284c7]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-20L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+          </div>
+          <div>
+            <span className="text-xl md:text-2xl font-black text-[#0284c7] font-mono tracking-tight block">Rp {stockValue.toLocaleString('id-ID')}</span>
+            <span className="text-[9px] font-medium text-slate-400 block mt-1.5">Bahan plat & gondola</span>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-xs space-y-3">
-          <span className="text-[9px] uppercase font-extrabold text-slate-400 tracking-wider block">Revenue (Monthly)</span>
-          <span className="text-xl font-black text-emerald-600 font-mono">Rp {monthlyRevenue.toLocaleString('id-ID')}</span>
-          <span className="text-[9px] text-slate-400 block">Omset kotor terrealisasi</span>
+
+        {/* Revenue Card */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/70 shadow-sm flex flex-col justify-between h-36 hover:scale-105 hover:shadow-md transition-all duration-500 cursor-pointer group">
+          <div className="flex items-start justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Revenue (Monthly)</span>
+            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center group-hover:-rotate-12 transition-transform duration-300">
+              <svg className="w-3 h-3 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M12 16v1" />
+              </svg>
+            </div>
+          </div>
+          <div>
+            <span className="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight block">Rp {monthlyRevenue.toLocaleString('id-ID')}</span>
+            <span className="text-[9px] font-medium text-slate-400 block mt-1.5">Omset kotor terrealisasi</span>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-xs space-y-3">
-          <span className="text-[9px] uppercase font-extrabold text-slate-400 tracking-wider block">Profit Margin (Monthly)</span>
-          <span className="text-xl font-black text-indigo-600 font-mono">{monthlyProfitMargin.toFixed(1)}%</span>
-          <span className="text-[9px] text-emerald-600 block">▲ Margin sehat</span>
+
+        {/* Profit Margin Card */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/70 shadow-sm flex flex-col justify-between h-36 hover:scale-105 hover:shadow-md transition-all duration-500 cursor-pointer group">
+          <div className="flex items-start justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Profit Margin</span>
+            <div className="w-5 h-5 rounded-full bg-indigo-50 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <svg className="w-3 h-3 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+              </svg>
+            </div>
+          </div>
+          <div>
+            <span className="text-xl md:text-2xl font-black text-indigo-600 font-mono tracking-tight block">{monthlyProfitMargin.toFixed(1)}%</span>
+            <span className="text-[9px] font-medium text-emerald-600 block mt-1.5">▲ Margin sehat</span>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-xs space-y-3">
-          <span className="text-[9px] uppercase font-extrabold text-slate-400 tracking-wider block">Total Sales (Monthly)</span>
-          <span className="text-xl font-black text-amber-500 font-mono">{totalSalesQty} Unit</span>
-          <span className="text-[9px] text-slate-400 block">Rak terkirim / terjual</span>
+
+        {/* Total Sales Card */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200/70 shadow-sm flex flex-col justify-between h-36 hover:scale-105 hover:shadow-md transition-all duration-500 cursor-pointer group">
+          <div className="flex items-start justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Sales</span>
+            <div className="w-5 h-5 rounded-full bg-amber-50 flex items-center justify-center group-hover:rotate-12 transition-transform duration-300">
+              <svg className="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              </svg>
+            </div>
+          </div>
+          <div>
+            <span className="text-xl md:text-2xl font-black text-slate-900 font-mono tracking-tight block">{totalSalesQty} Unit</span>
+            <span className="text-[9px] font-medium text-slate-400 block mt-1.5">Rak terkirim / terjual</span>
+          </div>
         </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

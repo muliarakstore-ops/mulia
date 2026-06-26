@@ -399,27 +399,27 @@ export default function BusinessDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-slate-800 font-sans flex flex-col md:flex-row">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 font-sans flex flex-col md:flex-row">
       
-      {/* SIDEBAR NAVIGATION - Solid Blue */}
-      <aside className="w-full md:w-64 bg-[#0284c7] text-white flex flex-col justify-between py-6 flex-shrink-0">
+      {/* SIDEBAR NAVIGATION - Premium v0 Light Theme */}
+      <aside className="w-full md:w-64 bg-white border-r border-slate-200/80 text-slate-700 flex flex-col justify-between py-6 flex-shrink-0">
         <div>
           {/* Logo Brand Header */}
-          <div className="pl-6 pr-6 pb-6 border-b border-white/10 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-white text-[#0284c7] flex items-center justify-center font-black text-xl font-serif">
+          <div className="pl-6 pr-6 pb-6 border-b border-slate-100 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0284c7] text-white flex items-center justify-center font-black text-lg transition-transform hover:scale-105 duration-300">
               M
             </div>
             <div>
-              <span className="text-lg font-extrabold text-white tracking-wider font-serif block leading-none">MULIA</span>
-              <span className="text-[9px] uppercase font-bold text-sky-200 block mt-1">Business Room 💼</span>
+              <span className="text-base font-black text-slate-900 tracking-tight block leading-none">MULIA</span>
+              <span className="text-[9px] uppercase font-bold text-slate-400 block mt-1 tracking-wider">Business Room 💼</span>
             </div>
           </div>
-
+ 
           {/* Menus List */}
-          <nav className="px-4 py-6 space-y-2">
+          <nav className="px-4 py-6 space-y-1.5">
             {[
               { id: 'overview', label: '📊 Overview', desc: 'Rangkuman Performa' },
-              { id: 'ledger', label: '📖 Transaksi & Keuangan', desc: 'Arus Kas & Analisis Keuangan' },
+              { id: 'ledger', label: '📖 Transaksi & Keuangan', desc: 'Arus Kas & Buku Besar' },
               { id: 'products', label: '📦 Produk & Pasar', desc: 'Stok & Insight Penjualan' },
               { id: 'ratios', label: '📐 Permodalan & Rasio', desc: 'ROE, ROA, ROAS' },
               { id: 'accounting', label: '🧮 Akuntansi', desc: 'PnL, Cashflow & Neraca' },
@@ -427,42 +427,67 @@ export default function BusinessDashboard() {
               <button
                 key={menu.id}
                 onClick={() => setActiveMenu(menu.id as any)}
-                className={`w-full text-left px-4 py-3 rounded-2xl text-xs font-bold transition-all cursor-pointer block ${
+                className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-300 cursor-pointer block ${
                   activeMenu === menu.id
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#0284c7] text-white shadow-lg shadow-[#0284c7]/20 font-bold scale-[1.02]'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
                 }`}
               >
-                <span>{menu.label}</span>
-                <span className="block text-[8px] font-normal opacity-60 mt-0.5">{menu.desc}</span>
+                <span className="text-xs">{menu.label}</span>
+                <span className={`block text-[8px] font-normal mt-0.5 ${
+                  activeMenu === menu.id ? 'text-sky-100' : 'text-slate-400'
+                }`}>{menu.desc}</span>
               </button>
             ))}
           </nav>
         </div>
-
+ 
         {/* Sidebar Footer Link */}
-        <div className="px-4 border-t border-white/10 pt-4 flex flex-col gap-2">
-          <div className="flex items-center gap-3 px-3 py-2 bg-white/10 rounded-xl">
-            <div className="w-8 h-8 rounded-full bg-white text-[#0284c7] font-bold flex items-center justify-center text-xs">
+        <div className="px-4 border-t border-slate-100 pt-4 flex flex-col gap-2.5">
+          <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 border border-slate-200/50 rounded-xl">
+            <div className="w-8 h-8 rounded-full bg-[#0284c7]/10 text-[#0284c7] font-black flex items-center justify-center text-xs">
               IQ
             </div>
             <div className="truncate max-w-[120px]">
-              <span className="text-[10px] font-black text-white block leading-none">Iqbal Owner</span>
-              <span className="text-[8px] font-semibold text-sky-200 uppercase tracking-widest block mt-0.5">Owner</span>
+              <span className="text-[10px] font-extrabold text-slate-800 block leading-none">Iqbal Owner</span>
+              <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest block mt-0.5">Owner</span>
             </div>
           </div>
-
+ 
           <button
             onClick={handleLogout}
-            className="w-full bg-white/10 hover:bg-white/20 text-white text-xs py-2.5 rounded-xl block font-bold transition-colors cursor-pointer text-center"
+            className="w-full bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-xs py-2.5 rounded-xl block font-bold transition-all hover:scale-[1.02] cursor-pointer text-center"
           >
             👋 Logout
           </button>
         </div>
       </aside>
-
+ 
       {/* MAIN VIEWPORT */}
-      <main className="flex-1 overflow-y-auto max-h-screen p-6 md:p-8 space-y-8 bg-slate-50 text-slate-800">
+      <main className="flex-1 overflow-y-auto max-h-screen p-5 md:p-8 space-y-6 md:space-y-8 bg-[#f8fafc] text-slate-800 flex flex-col">
+        
+        {/* TOP BAR / HEADER */}
+        <header className="flex items-center justify-between pb-5 border-b border-slate-200/60 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-450" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input 
+                type="text" 
+                placeholder="Cari transaksi atau data..." 
+                className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-12 py-2 text-xs focus:outline-none focus:border-[#0284c7]/50 focus:ring-2 focus:ring-[#0284c7]/10 transition-all text-slate-850"
+              />
+              <kbd className="hidden md:inline-block absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[8px] font-bold text-slate-400 bg-slate-50 rounded border border-slate-200">⌘F</kbd>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-[10px] font-bold text-slate-600 shadow-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Live Database
+            </div>
+          </div>
+        </header>
         
         {/* OVERVIEW SECTION */}
         {activeMenu === 'overview' && (

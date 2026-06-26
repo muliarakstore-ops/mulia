@@ -517,110 +517,112 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Sidebar Navigation - Styled after eProduct Solid Blue Theme */}
-      <aside className="w-full md:w-64 bg-[#0284c7] text-white flex flex-col justify-between py-6 flex-shrink-0">
+      {/* Sidebar Navigation - Premium v0 Light Theme */}
+      <aside className="w-full md:w-64 bg-white border-r border-slate-200/80 text-slate-700 flex flex-col justify-between py-6 flex-shrink-0">
         <div>
           {/* Logo Brand Header */}
-          <div className="pl-6 pr-6 pb-6 border-b border-white/10 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-white text-[#0284c7] flex items-center justify-center font-black text-xl font-serif">
+          <div className="pl-6 pr-6 pb-6 border-b border-slate-100 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0284c7] text-white flex items-center justify-center font-black text-lg transition-transform hover:scale-105 duration-300">
               M
             </div>
             <div>
-              <span className="text-lg font-extrabold text-white tracking-wider font-serif block leading-none">{cmsConfig.brandName}</span>
-              <span className="text-[9px] uppercase font-bold text-sky-200 block mt-1">Dashboard Admin</span>
+              <span className="text-base font-black text-slate-900 tracking-tight block leading-none">{cmsConfig.brandName}</span>
+              <span className="text-[9px] uppercase font-bold text-slate-400 block mt-1 tracking-wider">Dashboard Admin</span>
             </div>
           </div>
 
           {/* Menus List */}
-          <nav className="px-4 py-6 space-y-6">
+          <nav className="px-4 py-6 space-y-5">
             
             {/* Category: Utama */}
             <div className="space-y-1.5">
-              <div className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest pl-3 pb-1">Menu Utama</div>
+              <div className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest pl-3 pb-1">Menu Utama</div>
               
               <button
                 onClick={() => setActiveMenu('overview')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-all duration-300 cursor-pointer rounded-xl ${
                   activeMenu === 'overview'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#0284c7] text-white shadow-lg shadow-[#0284c7]/20 font-bold scale-[1.02]'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950 font-medium'
                 }`}
               >
-                <svg className="w-4.5 h-4.5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
+                <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
                 </svg>
                 <span>Overview</span>
               </button>
 
               <button
                 onClick={() => setActiveMenu('cms')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-all duration-300 cursor-pointer rounded-xl ${
                   activeMenu === 'cms'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#0284c7] text-white shadow-lg shadow-[#0284c7]/20 font-bold scale-[1.02]'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950 font-medium'
                 }`}
               >
                 <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 <span>Landing Page</span>
               </button>
 
               <button
                 onClick={() => setActiveMenu('catalog')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-all duration-300 cursor-pointer rounded-xl ${
                   activeMenu === 'catalog'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#0284c7] text-white shadow-lg shadow-[#0284c7]/20 font-bold scale-[1.02]'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950 font-medium'
                 }`}
               >
                 <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
                 <span>Products</span>
               </button>
 
               <button
                 onClick={() => setActiveMenu('services')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-all duration-300 cursor-pointer rounded-xl ${
                   activeMenu === 'services'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#0284c7] text-white shadow-lg shadow-[#0284c7]/20 font-bold scale-[1.02]'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950 font-medium'
                 }`}
               >
                 <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 <span>Services</span>
               </button>
 
               <button
                 onClick={() => setActiveMenu('profile')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-all duration-300 cursor-pointer rounded-xl ${
                   activeMenu === 'profile'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#0284c7] text-white shadow-lg shadow-[#0284c7]/20 font-bold scale-[1.02]'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950 font-medium'
                 }`}
               >
                 <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <span>Profile</span>
               </button>
-            </div>            {/* Category: Tim Kreatif */}
+            </div>
+
+            {/* Category: Tim Kreatif */}
             <div className="space-y-1.5">
-              <div className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest pl-3 pb-1 pt-1">Tim Kreatif</div>
+              <div className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest pl-3 pb-1 pt-1">Tim Kreatif</div>
               
               <button
                 onClick={() => setActiveMenu('creative')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-2.5 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-all duration-300 cursor-pointer rounded-xl ${
                   activeMenu === 'creative'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#0284c7] text-white shadow-lg shadow-[#0284c7]/20 font-bold scale-[1.02]'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-955 font-medium'
                 }`}
               >
                 <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
                 </svg>
                 <span>Tim Kreatif</span>
               </button>
@@ -628,32 +630,31 @@ export default function AdminDashboard() {
 
             {/* Category: Pengaturan */}
             <div className="space-y-1.5">
-              <div className="text-[9px] font-extrabold text-white/40 uppercase tracking-widest pl-3 pb-1 pt-1">Sistem</div>
+              <div className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest pl-3 pb-1 pt-1">Sistem</div>
               <button
                 onClick={() => setActiveMenu('settings')}
-                className={`sidebar-btn w-full flex items-center gap-3 px-4 py-3 text-xs font-bold transition-all cursor-pointer rounded-2xl ${
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-xs transition-all duration-300 cursor-pointer rounded-xl ${
                   activeMenu === 'settings'
-                    ? 'bg-white/15 text-white shadow-sm'
-                    : 'text-white/70 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#0284c7] text-white shadow-lg shadow-[#0284c7]/20 font-bold scale-[1.02]'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-955 font-medium'
                 }`}
               >
                 <svg className="w-4.5 h-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <span>Settings</span>
               </button>
             </div>
 
           </nav>
-
         </div>
 
         {/* Sidebar Footer Link */}
-        <div className="pl-4 pr-4 border-t border-white/10 pt-4">
+        <div className="px-4 border-t border-slate-100 pt-4">
           <a
             href="/"
-            className="w-full bg-white/10 text-center text-xs text-white hover:bg-white/20 py-3 rounded-2xl block font-bold transition-colors cursor-pointer uppercase tracking-wider mr-4"
+            className="w-full bg-slate-100 text-slate-700 hover:bg-slate-200 text-center text-xs py-3 rounded-xl block font-bold transition-all hover:scale-[1.02] cursor-pointer uppercase tracking-wider"
           >
             Lihat Live Website 🔗
           </a>
